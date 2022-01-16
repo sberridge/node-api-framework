@@ -1,0 +1,20 @@
+{
+    "session_secret": "u1NhEjyweruiUWU391HeAn",
+    "encryption_key": "GM48HcXLsEA*uY^jFov9*TUAXZ!03FCjT18Qmlu6uOx#WJw",
+    "whitelisted_domains": [
+        "http://localhost:9000",
+        "http://localhost"
+    ],
+    "databases": {
+        "sql": {
+            "test": {
+                "type": "MySQL",
+                "host": "localhost",
+                "database": "test",
+                "port": 3306,
+                "user": "root",
+                "password": ""
+            } 
+        }
+    }
+}

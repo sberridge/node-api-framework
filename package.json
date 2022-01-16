@@ -1,0 +1,36 @@
+{
+  "name": "nodejs-backend-server-framework",
+  "private": true,
+  "version": "1.0.0",
+  "description": "nodejs backend framework for API development",
+  "main": "index.js",
+  "scripts": {
+    "test": "tsc && node dist/out-tsc/test/init/init.js && mocha dist/out-tsc/test",
+    "start": "tsc && nodemon dist/out-tsc/server.js"
+  },
+  "author": "Steven Berridge",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/chai": "^4.2.15",
+    "@types/mocha": "^8.2.2",
+    "chai": "^4.3.4",
+    "mocha": "^8.3.2",
+    "mochawesome": "^6.2.2",
+    "nodemon": "^1.18.10"
+  },
+  "dependencies": {
+    "@types/express": "^4.17.13",
+    "@types/mssql": "^7.1.4",
+    "@types/mysql": "^2.15.20",
+    "@types/node": "^11.13.0",
+    "@types/node-fetch": "^2.5.8",
+    "cors": "^2.8.5",
+    "crypto-random-string": "^3.0.1",
+    "express": "^4.17.1",
+    "express-session": "^1.17.2",
+    "express-ws": "^4.0.0",
+    "mssql": "^6.2.1",
+    "mysql": "^2.16.0",
+    "node-fetch": "^2.6.1"
+  }
+}

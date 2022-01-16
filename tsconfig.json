@@ -1,0 +1,19 @@
+{
+    "compileOnSave": false,
+    "compilerOptions": {
+      "baseUrl": "./",
+      "outDir": "./dist/out-tsc",
+      "sourceMap": true,
+      "declaration": false,
+      "resolveJsonModule": true,
+      "module": "commonjs",
+      "moduleResolution": "node",
+      "emitDecoratorMetadata": false,
+      "experimentalDecorators": false,
+      "importHelpers": true,
+      "target": "esnext",
+      "lib": ["esnext"],
+      "types": ["node","chai","mocha","node-fetch"]
+    }
+  }
+  
