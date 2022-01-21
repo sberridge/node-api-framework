@@ -352,7 +352,7 @@ export class PostgresData implements iSQL {
     }
 
     public generateConditional(ifThis:string,thenVal:string,elseVal:string):string {
-        return "if(" + ifThis + ', ' + thenVal + ', ' + elseVal + ")";
+        return "CASE WHEN " + ifThis + ' THEN ' + thenVal + ' ELSE ' + elseVal + " END";
     }
 
     public generateSelect() : string {

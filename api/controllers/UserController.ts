@@ -11,7 +11,7 @@ exports.get_users = async function(req:Request, res:Response, next:NextFunction)
     let db = factory.create('post');
     let sub = db.newQuery();
     db.table('users');
-    db.cols(["*"]);
+    db.cols(["*", `${db.generateConditional("id = 5", "'hello'", "'hi'")} greeting`]);
 
     sub.table('users');
     sub.cols(["id"]);
@@ -20,6 +20,8 @@ exports.get_users = async function(req:Request, res:Response, next:NextFunction)
     db.whereIn("id", sub);
     db.or()
     db.where('id','=',5,true);
+
+    db.order("id", "desc");
 
     
     db.fetch().then((res)=>{
