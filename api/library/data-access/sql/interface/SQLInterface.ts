@@ -29,6 +29,9 @@ import { comparison, pagination } from './SQLTypes';
         getParams() : any[]
         getParamNames() : any[]
 
+        increaseParamNum(num:number):void
+        getParamNum():number
+
         cols(columns : string[]) : iSQL
         addCol(column : string) : iSQL
         removeCol(column : string) : iSQL

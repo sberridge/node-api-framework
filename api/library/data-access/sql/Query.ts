@@ -6,6 +6,7 @@ export class Query {
     private namedParams: boolean;
     private namedParamNum: number = 0;
     private namedParamPrefix: string = "param";
+    private namedParamSymbol: string = '@';
 
     constructor(namedParams: boolean) {
         this.namedParams = namedParams;
@@ -23,47 +24,58 @@ export class Query {
         this.namedParamPrefix = prefix;
     }
 
+    public setParamSymbol(symbol:string) {
+        this.namedParamSymbol = symbol;
+    }
+
     public getWheres() {
         return this.wheres;
     }
     
     public where(field : string, comparator : comparison, value : any, escape : boolean = true) : Query {
-        var details = {
+        
+        this.wheres.push({
             type: "where",
-            field: field,
-            comparator: comparator,
-            value: value,
-            escape: escape
-        };
-        if(escape) {
-            details['namedParam'] = this.namedParamPrefix + (this.namedParamNum++).toString();
-        }
-        this.wheres.push(details);
+            func: (field : string, comparator : comparison, value : any, escape : boolean = true)=>{
+                var details = {
+                    type: "where",
+                    field: field,
+                    comparator: comparator,
+                    value: value,
+                    escape: escape
+                };
+                if(escape) {
+                    details['namedParam'] = this.namedParamPrefix + (this.namedParamNum++).toString();
+                }
+                return details;
+            },
+            args: [
+                field,
+                comparator,
+                value,
+                escape
+            ]
+        });
         return this;
     }
     
     public on(field : string, comparator : comparison, value : any, escape : boolean = false) : Query {
-        var details = {
-            type: "where",
-            field: field,
-            comparator: comparator,
-            value: value,
-            escape: escape
-        };
-        if(escape) {
-            details['namedParam'] = this.namedParamPrefix + (this.namedParamNum++).toString()
-        }
-        this.wheres.push(details);
-        return this;
+        return this.where(field, comparator, value, escape);
     }
     
     public whereNull(field : string) : Query {
         this.wheres.push({
             type: "where",
-            field: field,
-            comparator: "",
-            value: "IS NULL",
-            escape: false
+            func: (field:string)=>{
+                return {
+                    type: "where",
+                    field: field,
+                    comparator: "",
+                    value: "IS NULL",
+                    escape: false
+                };
+            },
+            args:[field]
         });
         return this;
     }
@@ -73,50 +85,68 @@ export class Query {
     public whereNotNull(field : string) : Query {
         this.wheres.push({
             type: "where",
-            field: field,
-            comparator: "",
-            value: "IS NOT NULL",
-            escape: false
+            func: (field:string)=>{
+                return {
+                    type: "where",
+                    field: field,
+                    comparator: "",
+                    value: "IS NOT NULL",
+                    escape: false
+                };
+            },
+            args:[field]
         });
         return this;
     }
 
     public onNotNull = this.whereNotNull;
-    
+
     public whereIn(field : string, subQuery : iSQL) : Query
     public whereIn(field : string, values : any[], escape : boolean) : Query
     public whereIn(field : string, values : any, escape : boolean = true) : Query {
-        var valueString : string;
-        var params = [];
-        var paramPrefixes = [];
-        if(Array.isArray(values)) {
-            if(!escape) {
-                valueString = " (" + values.join(",") + ") ";
-            } else {
-                valueString = " (" + values.map((value,index)=>{
-                    if(this.namedParams) {
-                        var namedParam = this.namedParamPrefix + (this.namedParamNum++).toString();
-                        paramPrefixes.push(namedParam);
-                        return "@"+namedParam;
-                    } else {
-                        return "?";
-                    }                    
-                }).join(",") + ") ";
-                params = values;
-            }
-        } else {
-            valueString = " (" + values.generateSelect() + ") ";
-            params = values.getParams();
-            paramPrefixes = values.getParamNames();
-        }
         this.wheres.push({
             type: "where",
-            field: field,
-            comparator: "IN",
-            value: valueString,
-            escape: false,
-            params: params,
-            paramNames: paramPrefixes
+            func: (field:string, values: any, escape:boolean=true)=>{
+                var valueString : string;
+                var params = [];
+                var paramPrefixes = [];
+                if(Array.isArray(values)) {
+                    if(!escape) {
+                        valueString = " (" + values.join(",") + ") ";
+                    } else {
+                        valueString = " (" + values.map((value,index)=>{
+                            if(this.namedParams) {
+                                var namedParam = this.namedParamPrefix + (this.namedParamNum++).toString();
+                                paramPrefixes.push(namedParam);
+                                return this.namedParamSymbol + namedParam;
+                            } else {
+                                return "?";
+                            }                    
+                        }).join(",") + ") ";
+                        params = values;
+                    }
+                } else {
+                    values.increaseParamNum(this.getParamNum()-1);
+                    valueString = " (" + values.generateSelect() + ") ";
+                    this.increaseParamNum(values.getParamNum()-1);
+                    params = values.getParams();
+                    paramPrefixes = values.getParamNames();
+                }
+                return {
+                    type: "where",
+                    field: field,
+                    comparator: "IN",
+                    value: valueString,
+                    escape: false,
+                    params: params,
+                    paramNames: paramPrefixes
+                };
+            },
+            args: [
+                field,
+                values,
+                escape
+            ]
         });
         return this;
     }
@@ -177,28 +207,29 @@ export class Query {
         this.wheres.forEach((where : any,i)=> {
             switch(where.type) {
                 case "where":
+                    let whereDetails = where.func(...where.args);
                     if(!first && this.wheres[i-1]['type'] !== 'bracket') {
                         whereString += " " + logic.toUpperCase() + " ";
                     }
                     first = false;
-                    whereString += " " + where.field + " " + where.comparator + " ";
-                    if(where.escape) {
+                    whereString += " " + whereDetails.field + " " + whereDetails.comparator + " ";
+                    if(whereDetails.escape) {
                         if(this.namedParams) {
-                            whereString += " @" + where.namedParam + " ";
-                            paramNames.push(where.namedParam);
+                            whereString += " " + this.namedParamSymbol + whereDetails.namedParam + " ";
+                            paramNames.push(whereDetails.namedParam);
                         } else {
                             whereString += " ? ";
                         }                        
-                        params.push(where.value);
+                        params.push(whereDetails.value);
                     } else {
-                        whereString += " " + where.value + " ";
+                        whereString += " " + whereDetails.value + " ";
                     }
-                    if("params" in where) {
-                        where.params.forEach((whereParam)=>{
+                    if("params" in whereDetails) {
+                        whereDetails.params.forEach((whereParam)=>{
                             params.push(whereParam);
                         });
                         if(this.namedParams) {
-                            where.paramNames.forEach((paramName)=>{
+                            whereDetails.paramNames.forEach((paramName)=>{
                                 paramNames.push(paramName);
                             });
                         }

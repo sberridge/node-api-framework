@@ -211,6 +211,14 @@ export class MSSQLData implements iSQL {
         this.query.setPrefix(prefix);
     }
 
+    public increaseParamNum(num: number) {
+        this.query.increaseParamNum(num);
+    }
+
+    public getParamNum(): number {
+        return this.query.getParamNum();
+    }
+
     public cols(selectColumns : string[]) : MSSQLData {
         var self = this;
         this.selectColumns = selectColumns.map(function(col) {
