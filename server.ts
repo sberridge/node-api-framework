@@ -1,7 +1,7 @@
 import { Express } from "express";
 import { Config } from "./api/library/Config";
 
-var session = require('express-session');
+var session = require('cookie-session');
 var express = require('express'),
   expressWs = require('express-ws'),
   cors = require('cors'),
