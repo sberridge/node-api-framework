@@ -492,36 +492,21 @@ export class PostgresData implements iSQL {
                 const query = new QueryStream(self.generateSelect(), self.params);
                 const stream = connection.query(query);
                 stream.on("data",async (data)=>{
-                    await callback(data);
+                    results.push(data);
+                    if(results.length >= num) {
+                        stream.pause();
+                        await callback(results);
+                        results = [];
+                        stream.resume();
+                    }
                 })
-                .on("end",()=>{
+                .on("end",async ()=>{
+                    if(results.length > 0) {
+                        await callback(results);
+                    }
                     connection.release();
                     resolve();
-                })
-                /* connection.query(self.generateSelect(),self.params)
-                    .on('error',function(err) {
-                        reject(err);
-                    })
-                    .on('fields',function(fields) {
-
-                    })
-                    .on('result',async function(result) {
-                        results.push(result);
-                        if(results.length >= num) {
-                            connection.pause();
-                            await callback(results);
-                            results = [];
-                            connection.resume();
-                        }
-                    })
-                    .on('end',async function() {
-                        if(results.length > 0) {
-                            await callback(results);
-                        }
-                        connection.release();
-                        resolve();
-                    }); */
-                
+                })                
             });
         });
         

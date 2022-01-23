@@ -12,7 +12,7 @@ exports.get_users = async function(req:Request, res:Response, next:NextFunction)
     let sub = db.newQuery();
     db.table('users');
     db.cols(["*"]);
-    db.stream(1,(result)=>{
+    db.stream(2,(result)=>{
         return new Promise((res,rej)=>{
             console.log(result);    
             return res();
