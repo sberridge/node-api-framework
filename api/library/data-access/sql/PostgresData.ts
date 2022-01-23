@@ -81,8 +81,8 @@ export class PostgresData implements iSQL {
             var db = new PostgresData(this.usedConfig);
             db.table("information_schema.TABLES");
             db.cols(['COUNT(*) num']);
-            db.where("TABLE_SCHEMA","=",this.usedConfig['database'],true);
-            db.where("TABLE_NAME","=",table,true);
+            db.where("table_catalog","=",this.usedConfig['database'],true);
+            db.where("table_name","=",table,true);
             db.fetch().then((res)=>{
                 resolve(res.rows[0]['num'] > 0);
             }).catch((e)=>{
@@ -94,11 +94,11 @@ export class PostgresData implements iSQL {
     public async doesColumnExist(table:string,column:string):Promise<boolean> {
         return new Promise((resolve,reject)=>{
             var db = new PostgresData(this.usedConfig);
-            db.table("information_schema.COLUMNS");
+            db.table("information_schema.columns");
             db.cols(['COUNT(*) num']);
-            db.where("TABLE_SCHEMA","=",this.usedConfig['database'],true);
-            db.where("TABLE_NAME","=",table,true);
-            db.where("COLUMN_NAME","=",column,true);
+            db.where("table_catalog","=",this.usedConfig['database'],true);
+            db.where("table_name","=",table,true);
+            db.where("column_name","=",column,true);
 
             db.fetch().then((res)=>{
                 resolve(res.rows[0]['num'] > 0);
@@ -112,10 +112,10 @@ export class PostgresData implements iSQL {
     public async doesTriggerExist(triggerName:string):Promise<boolean> {
         return new Promise((resolve,reject)=>{
             var db = new PostgresData(this.usedConfig);
-            db.table("information_schema.TRIGGERS");
+            db.table("information_schema.triggers");
             db.cols(['COUNT(*) num']);
-            db.where("TRIGGER_SCHEMA","=",this.usedConfig['database'],true);
-            db.where("TRIGGER_NAME","=",triggerName,true);
+            db.where("tigger_catalog","=",this.usedConfig['database'],true);
+            db.where("trigger_name","=",triggerName,true);
             db.fetch().then((res)=>{
                 resolve(res[0]['num'] > 0);
             }).catch((e)=>{
@@ -127,10 +127,10 @@ export class PostgresData implements iSQL {
     public async doesStoredProcedureExist(procedureName:string):Promise<boolean> {
         return new Promise((resolve,reject)=>{
             var db = new PostgresData(this.usedConfig);
-            db.table("information_schema.ROUTINES");
+            db.table("information_schema.routines");
             db.cols(['COUNT(*) num']);
-            db.where("ROUTINE_SCHEMA","=",this.usedConfig['database'],true);
-            db.where("ROUTINE_NAME","=",procedureName,true);
+            db.where("routine_catalog","=",this.usedConfig['database'],true);
+            db.where("routine_name","=",procedureName,true);
             db.fetch().then((res)=>{
                 resolve(res[0]['num'] > 0);
             }).catch((e)=>{
