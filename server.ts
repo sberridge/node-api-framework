@@ -40,9 +40,20 @@ app.use(function(req,res,next) {
   next();
 });
 
+
+
+
+
+
+/**
+ * IMPORT ROUTES HERE
+ */
+
 require('./api/routes/UserRoutes')(app);
 
 require('./api/routes/WebSocketRoutes')(app);
+
+
 
 
 
