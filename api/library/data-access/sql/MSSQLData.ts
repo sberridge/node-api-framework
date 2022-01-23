@@ -35,6 +35,7 @@ export class MSSQLData implements iSQL {
     private groupFields: string[];
 
     constructor(connectionConfig : ConnectionConfig = null) {
+        this.query.increaseParamNum(1);
         if(connectionConfig !== null) {
             this.usedConfig = connectionConfig;   
             
@@ -386,22 +387,33 @@ export class MSSQLData implements iSQL {
         query += " FROM ";
 
         if(typeof this.subStatement != "undefined") {
+            let startParamNum = this.subStatement.getParamNum();
             query += "(" + this.subStatement.generateSelect() + ") " + this.tableAlias + " ";
+            let diff = this.subStatement.getParamNum() - startParamNum;
+            this.increaseParamNum(diff);
             this.subStatement.getParams().forEach(function(param) {
                 params.push(param);
+            });
+            this.subStatement.getParamNames().forEach((paramName)=>{
+                paramNames.push(paramName);
             });
         } else {
             query += " " + this.tableName + " ";
         }
 
-        this.joins.forEach(function(join : any) {
-            join.params.forEach(function(param) {
+        this.joins.forEach((join : any)=>{
+            let joinDetails = join.func(...join.args);
+            joinDetails.params.forEach(function(param) {
                 params.push(param);
             });
-            join.paramNames.forEach(function(paramName) {
+            joinDetails.paramNames.forEach(function(paramName) {
                 paramNames.push(paramName);
             });
-            query += " " + join.type + " " + " " + join.table + " ON " + (join.query.applyWheres(params,paramNames));
+            joinDetails.query.increaseParamNum(this.getParamNum()-1);
+            let startParamNum = joinDetails.query.getParamNum();
+            query += " " + joinDetails.type + " " + " " + joinDetails.table + " ON " + (joinDetails.query.applyWheres(params,paramNames));
+            let diff = joinDetails.query.getParamNum() - startParamNum;
+            this.increaseParamNum(diff);
         });
         if(this.query.getWheres().length > 0) {
             query += " WHERE " + (this.query.applyWheres(params,paramNames)) + " ";
@@ -742,37 +754,52 @@ export class MSSQLData implements iSQL {
     public join(tableName : string, queryFunc : (q: Query) => Query) : MSSQLData
     public join(tableName : string, primaryKey : string, foreignKey : string) : MSSQLData
     public join(table : any, arg2 : any, arg3 : any = null, arg4 : any = null) : MSSQLData {
-        var tableName = "";
-        var primaryKey;
-        var foreignKey;
-        var params = [];
-        var paramNames = [];
-        if(typeof table == "string") {
-            tableName = table;
-            primaryKey = arg2;
-            foreignKey = arg3;
-        } else {
-            tableName = "(" + table.generateSelect() + ") " + arg2 + " ";
-            primaryKey = arg3;
-            foreignKey = arg4;
-            params = table.getParams();
-            paramNames = table.getParamNames();
-        }
-        var query = new Query(true);
-        if(typeof primaryKey != "string") {
-            primaryKey(query);
-        } else {
-            query.on(primaryKey,"=",foreignKey);
-            
-        }
-        this.query.increaseParamNum(query.getParamNum());
         this.joins.push({
-            type: "join",
-            table: tableName,
-            query: query,
-            params: params,
-            paramNames: paramNames
+            type: "JOIN",
+            func: (table : any, arg2 : any, arg3 : any = null, arg4 : any = null) => {
+                var tableName = "";
+                var primaryKey;
+                var foreignKey;
+                var params = [];
+                var paramNames = [];
+                if(typeof table == "string") {
+                    tableName = table;
+                    primaryKey = arg2;
+                    foreignKey = arg3;
+                } else {
+                    table.increaseParamNum(this.getParamNum()-1);
+                    let startParamNum = table.getParamNum();
+                    tableName = "(" + table.generateSelect() + ") " + arg2 + " ";
+                    let paramDif = table.getParamNum() - startParamNum;
+                    this.increaseParamNum(paramDif);
+                    primaryKey = arg3;
+                    foreignKey = arg4;
+                    params = table.getParams();
+                    paramNames = table.getParamNames();
+                }
+                var query = new Query(true);
+                query.increaseParamNum(1);
+                if(typeof primaryKey != "string") {
+                    primaryKey(query);
+                } else {
+                    query.on(primaryKey,"=",foreignKey);                    
+                }
+                return {
+                    type: "join",
+                    table: tableName,
+                    query: query,
+                    params: params,
+                    paramNames: paramNames
+                };
+            },
+            args: [
+                table, 
+                arg2, 
+                arg3, 
+                arg4
+            ]
         });
+        
         return this;
     }
     
@@ -781,37 +808,53 @@ export class MSSQLData implements iSQL {
     public leftJoin(tableName : string, queryFunc : (q: Query) => Query) : MSSQLData
     public leftJoin(tableName : string, primaryKey : string, foreignKey : string) : MSSQLData
     public leftJoin(table : any, arg2 : any, arg3 : any = null, arg4 : any = null) : MSSQLData {
-        var tableName = "";
-        var primaryKey;
-        var foreignKey;
-        var params = [];
-        var paramNames = [];
-        if(typeof table == "string") {
-            tableName = table;
-            primaryKey = arg2;
-            foreignKey = arg3;
-        } else {
-            tableName = "(" + table.generateSelect() + ") " + arg2 + " ";
-            primaryKey = arg3;
-            foreignKey = arg4;
-            params = table.getParams();
-            paramNames = table.getParamNames();
-        }
-        var query = new Query(true);
-        if(typeof primaryKey != "string") {
-            primaryKey(query);
-        } else {
-            query.on(primaryKey,"=",foreignKey,false);
-            
-        }
-        this.query.increaseParamNum(query.getParamNum());
         this.joins.push({
-            type: "left join",
-            table: tableName,
-            query: query,
-            params: params,
-            paramNames: paramNames
-        });
+            type: "LEFT JOIN",
+            func: (table : any, arg2 : any, arg3 : any = null, arg4 : any = null) =>{
+                var tableName = "";
+                var primaryKey;
+                var foreignKey;
+                var params = [];
+                var paramNames = [];
+                if(typeof table == "string") {
+                    tableName = table;
+                    primaryKey = arg2;
+                    foreignKey = arg3;
+                } else {
+                    table.increaseParamNum(this.getParamNum()-1);
+                    let startParamNum = table.getParamNum();
+                    tableName = "(" + table.generateSelect() + ") " + arg2 + " ";
+                    let paramDif = table.getParamNum() - startParamNum;
+                    this.increaseParamNum(paramDif);
+                    primaryKey = arg3;
+                    foreignKey = arg4;
+                    params = table.getParams();
+                    paramNames = table.getParamNames();
+                }
+                var query = new Query(true);
+                query.increaseParamNum(1);
+                if(typeof primaryKey != "string") {
+                    primaryKey(query);
+                } else {
+                    query.on(primaryKey,"=",foreignKey,false);
+                    
+                }
+                return {
+                    type: "left join",
+                    table: tableName,
+                    query: query,
+                    params: params,
+                    paramNames: paramNames
+                };
+            },
+            args: [
+                table, 
+                arg2, 
+                arg3, 
+                arg4
+            ]
+        })
+        
         return this;
     }
 
