@@ -14,14 +14,6 @@
                 "port": 3306,
                 "user": "root",
                 "password": ""
-            },
-            "post": {
-                "type": "Postgres",
-                "host": "localhost",
-                "database": "test",
-                "port": 5433,
-                "user": "postgres",
-                "password": "password"
             }
         }
     }
