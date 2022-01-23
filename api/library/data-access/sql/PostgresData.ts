@@ -491,8 +491,8 @@ export class PostgresData implements iSQL {
                 var results = [];
                 const query = new QueryStream(self.generateSelect(), self.params);
                 const stream = connection.query(query);
-                stream.on("data",(data)=>{
-                    console.log(data);
+                stream.on("data",async (data)=>{
+                    await callback(data);
                 })
                 .on("end",()=>{
                     connection.release();
