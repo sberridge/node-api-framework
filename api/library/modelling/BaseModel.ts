@@ -1,4 +1,4 @@
-var dataFactory = require('./../data-access/factory');
+
 import {BelongsTo} from './relations/BelongsTo';
 import {BelongsToMany} from './relations/BelongsToMany';
 import {HasOne} from './relations/HasOne';
@@ -6,6 +6,8 @@ import {HasMany} from './relations/HasMany';
 import { ModelCollection } from './ModelCollection';
 import { iSQL } from '../data-access/sql/interface/SQLInterface';
 import { SQLResult } from '../data-access/sql/SQLResult';
+import { DataAccessFactory } from '../data-access/factory';
+var dataFactory:DataAccessFactory = require('./../data-access/factory');
 
 export class BaseModel {
     private tableName: string;
@@ -18,6 +20,7 @@ export class BaseModel {
     private relations: object = {};
     private additionalColumns: object = {};
     private visibleColumns: string[] = [];
+    private incrementingField: string;
 
     constructor(sqlConfig: string, tableName: string, primaryKey: string = "id", fields: string[]) {
         this.relations = {};
@@ -30,6 +33,12 @@ export class BaseModel {
             this.original[field] = null;
             this.columns.push(this.tableName + "." + field);
         });
+    }
+
+    protected setIncrementingField(field:string) {
+        if(Object.keys(this.original).includes(field)) {
+            this.incrementingField = field;
+        }
     }
 
     public getSqlConfig() {
@@ -50,9 +59,12 @@ export class BaseModel {
 
     public find(id: any) : Promise<BaseModel> {
         var da = dataFactory.create(this.sqlConfig);
+        if(this.incrementingField) {
+            da.setIncrementingField(this.incrementingField);
+        }
         da.table(this.tableName);
         da.cols(this.columns);
-        da.where(this.primaryKey,"=",id);
+        da.where(this.primaryKey,"=",id,true);
         var self = this;
         return new Promise(function(resolve,reject) {
             da.fetch().then(function(result: SQLResult) {
@@ -79,6 +91,9 @@ export class BaseModel {
 
     public all():iSQL {
         var da = dataFactory.create(this.sqlConfig);
+        if(this.incrementingField) {
+            da.setIncrementingField(this.incrementingField);
+        }
         da.toModel(this.constructor);
         da.table(this.tableName);
         da.cols(this.columns);
@@ -188,6 +203,9 @@ export class BaseModel {
         var self = this;
         return new Promise(function(resolve,reject) {
             var da:iSQL = dataFactory.create(self.sqlConfig);
+            if(self.incrementingField) {
+                da.setIncrementingField(self.incrementingField);
+            }
             da.table(self.tableName);
             var updateObj = {};
             for(var key in self.changed) {
@@ -226,6 +244,9 @@ export class BaseModel {
                 return reject("record doesn't exist");
             }
             var da:iSQL = dataFactory.create(self.sqlConfig);
+            if(self.incrementingField) {
+                da.setIncrementingField(self.incrementingField);
+            }
             da.table(self.tableName);
             da.where(self.primaryKey,"=",self.original[self.primaryKey],true);
             da.delete().then(function(result) {           
