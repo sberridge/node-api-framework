@@ -200,6 +200,18 @@ export class MySQLData implements iSQL {
         return [];
     }
 
+    public increaseParamNum(num: number) {
+        this.query.increaseParamNum(num);
+    }
+
+    public getParamNum(): number {
+        return this.query.getParamNum();
+    }
+
+    public setIncrementingField(field: string): MySQLData {
+        return this;
+    }
+
     public cols(selectColumns : string[]) : MySQLData {
         var self = this;
         this.selectColumns = selectColumns.map(function(col) {

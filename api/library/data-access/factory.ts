@@ -4,6 +4,7 @@ import {MSSQLData} from './sql/MSSQLData';
 import { iSQL } from './sql/interface/SQLInterface';
 import { Config } from './../Config';
 import { ConnectionConfig } from './sql/interface/SQLConnectionConfig';
+import { PostgresData } from './sql/PostgresData';
 
 export class DataAccessFactory {
     private config;
@@ -40,6 +41,8 @@ export class DataAccessFactory {
                 return new MySQLData(connectionConfig);
             case "MSSQL":
                 return new MSSQLData(connectionConfig);
+            case "Postgres":
+                return new PostgresData(connectionConfig);
         }
     }
     public onReady(func) {
