@@ -9,22 +9,35 @@ var responseGenerator:ResponseGenerator = require('./../library/ResponseGenerato
 
 exports.get_users = async function(req:Request, res:Response, next:NextFunction) {
     let db = factory.create('post');
+    let fromSub = db.newQuery();
+    fromSub.table("users");
+    fromSub.cols(["*"]);
+    fromSub.where("id","=",10,true);
+
+    db.table(fromSub, "users");
+    db.cols(["*"]);
+    db.join("posts",(q)=>{
+        q.on("users.id","=","posts.user_id",false);
+        q.on("users.id","=",4,true);
+        return q;
+    });
+    db.leftJoin("posts p2", "users.id", "p2.user_id");
+
     let sub = db.newQuery();
     sub.table("posts");
-    sub.cols(["user_id"])
+    sub.cols(["user_id"]);
     sub.where("user_id","=",5,true);
-    let sub2 = db.newQuery();
-    sub2.table("posts");
-    sub2.cols(["user_id"])
-    sub2.where("user_id","=",5,true);
-    db.table('users');
-    db.whereIn("id",sub);
-    db.whereIn("id",sub2);
-    db.where("id","=",5,true);
-    db.cols(["*"]);
-    db.fetch().then((result)=>{
-        console.log(result);        
-    });
+
+    db.leftJoin(sub,"p3",(q)=>{
+        q.on("users.id","=","p3.user_id",false);
+        q.on("p3.user_id","=",6,true);
+        return q;
+    })
+
+    db.where("users.id","=",7,true);
+    db.fetch().then(res=>{
+        console.log(res);
+    })
 
     
     let getUsers = (new User()).all();
