@@ -34,6 +34,7 @@
     "mysql": "^2.16.0",
     "node-fetch": "^2.6.1",
     "pg": "^8.7.1",
-    "pg-query-stream": "^4.2.1"
+    "pg-query-stream": "^4.2.1",
+    "rijndael-js": "^2.0.0"
   }
 }
