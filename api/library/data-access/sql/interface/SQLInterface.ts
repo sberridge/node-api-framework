@@ -21,6 +21,8 @@ import { comparison, pagination } from './SQLTypes';
         closePool(key: string) : any
         closePools() : any
 
+        setIncrementingField(field:string): iSQL
+
         toModel(model: any) : any
         
         table(tableName : iSQL, tableAlias : string) : iSQL

@@ -11,22 +11,16 @@ exports.get_users = async function(req:Request, res:Response, next:NextFunction)
     let db = factory.create('post');
     let sub = db.newQuery();
     db.table('users');
-    db.cols(["*", `${db.generateConditional("id = 5", "'hello'", "'hi'")} greeting`]);
-
-    sub.table('users');
-    sub.cols(["id"]);
-    sub.where('name','=',"Rich",true);
-
-    db.whereIn("id", sub);
-    db.or()
-    db.where('id','=',5,true);
-
-    db.order("id", "desc");
+    db.cols(["*"]);
+    db.stream(1,(result)=>{
+        return new Promise((res,rej)=>{
+            console.log(result);    
+            return res();
+        })
+        
+    })
 
     
-    db.fetch().then((res)=>{
-        console.log(res);
-    });
     let getUsers = (new User()).all();
     let pagination  = await getUsers.paginate(10,1);
     let totalRows = pagination.total_rows;

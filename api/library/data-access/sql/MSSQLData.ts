@@ -219,6 +219,10 @@ export class MSSQLData implements iSQL {
         return this.query.getParamNum();
     }
 
+    public setIncrementingField(field: string): MSSQLData {
+        return this;
+    }
+
     public cols(selectColumns : string[]) : MSSQLData {
         var self = this;
         this.selectColumns = selectColumns.map(function(col) {

@@ -32,6 +32,7 @@ export class PostgresData implements iSQL {
     private modelFunc: new (...args: any[]) => BaseModel;
     private ordering: SQLOrder[] = [];
     private groupFields: string[];
+    private incrementingField: string;
 
     constructor(connectionConfig : ConnectionConfig) {
         this.usedConfig = connectionConfig;      
@@ -212,6 +213,11 @@ export class PostgresData implements iSQL {
         return this.query.getParamNum();
     }
 
+    public setIncrementingField(field: string): PostgresData {
+        this.incrementingField = this.checkReserved(field);
+        return this;
+    }
+
     public cols(selectColumns : string[]) : PostgresData {
         var self = this;
         this.selectColumns = selectColumns.map(function(col) {
@@ -248,7 +254,7 @@ export class PostgresData implements iSQL {
         return this;
     }
 
-    public checkReserved(value : any) : any {
+    public checkReserved(value : string) : string {
         var reservedWords = [
             'select',
             'insert',
@@ -593,6 +599,9 @@ export class PostgresData implements iSQL {
                 return "(" + Object.values(insertRow).join(",") + ")";
             }).join(',');            
         }
+        if(this.incrementingField) {
+            query += " returning " + this.incrementingField;
+        }
         return query;
     }
 
@@ -655,13 +664,13 @@ export class PostgresData implements iSQL {
 
     public execute(query : string): Promise<SQLResult> {
         var self = this;
-        return new Promise(function(resolve,reject) {
-            self.connect().connect(async function(err,connection) {
+        return new Promise((resolve,reject)=>{
+            self.connect().connect(async (err,connection)=>{
                 if(err) {
                     reject(err);
                 } else {
                     console.log(query,self.params);
-                    connection.query(query,self.params,function(error,results) {
+                    connection.query(query,self.params,(error,results)=>{
                         let result = new SQLResult();
                         connection.release();
                         if(error !== null) {
@@ -670,11 +679,15 @@ export class PostgresData implements iSQL {
                             return reject(error);
                         }
                         result.success = true;
-                        let resultType = results.constructor.name;
-                        if(resultType === 'OkPacket') {
+                        if(results.command == "INSERT") {
                             result.rows_affected = results.rowCount;
                             result.rows_changed = results.rowCount;
-                            result.insert_id = results.oid;
+                            if(this.incrementingField) {
+                                result.insert_id = results.rows[results.rows.length-1][results.fields[0].name]
+                            }
+                        } else if(["UPDATE", "DELETE"].includes(results.command)) {
+                            result.rows_affected = results.rowCount;
+                            result.rows_changed = results.rowCount;
                         } else {
                             result.rows = results.rows;
                         }
