@@ -10,15 +10,21 @@ var responseGenerator:ResponseGenerator = require('./../library/ResponseGenerato
 exports.get_users = async function(req:Request, res:Response, next:NextFunction) {
     let db = factory.create('post');
     let sub = db.newQuery();
+    sub.table("posts");
+    sub.cols(["user_id"])
+    sub.where("user_id","=",5,true);
+    let sub2 = db.newQuery();
+    sub2.table("posts");
+    sub2.cols(["user_id"])
+    sub2.where("user_id","=",5,true);
     db.table('users');
+    db.whereIn("id",sub);
+    db.whereIn("id",sub2);
+    db.where("id","=",5,true);
     db.cols(["*"]);
-    db.stream(2,(result)=>{
-        return new Promise((res,rej)=>{
-            console.log(result);    
-            return res();
-        })
-        
-    })
+    db.fetch().then((result)=>{
+        console.log(result);        
+    });
 
     
     let getUsers = (new User()).all();

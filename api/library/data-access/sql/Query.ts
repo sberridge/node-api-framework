@@ -127,8 +127,10 @@ export class Query {
                     }
                 } else {
                     values.increaseParamNum(this.getParamNum()-1);
+                    let startParamNum = values.getParamNum();
                     valueString = " (" + values.generateSelect() + ") ";
-                    this.increaseParamNum(values.getParamNum()-1);
+                    let paramDif = values.getParamNum() - startParamNum;
+                    this.increaseParamNum(paramDif);
                     params = values.getParams();
                     paramPrefixes = values.getParamNames();
                 }
