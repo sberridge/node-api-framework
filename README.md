@@ -191,3 +191,97 @@ exports.get_users = async function(req:Request, res:Response, next:NextFunction)
     next();
 };
 ```
+
+### Authentication
+
+Default authentication is handled in the api/filters/AuthFilter route filter using JWT (JSON Web Tokens).
+
+To register a JWT with the client, you must first authenticate a user via a request to the API, and then sign a JWT with some identifiable information.
+
+*api/controllers/UserController.ts*
+```typescript
+
+import { Hashing } from './../library/Hashing';
+import { Validator } from './../library/validation/Validator';
+import { JWT } from './../authentication/JWT'
+const jwt:JWT = require('./../authentication/JWT');
+
+exports.login = async function(req:Request, res:Result, next:NextFunction) {
+
+    /**
+     * Example validating and confirming credentials with the Hashing module (using bcrypt)
+     */
+    const requestBody = req.body;
+    const validation = new Validator(requestBody);
+
+    validation.validateRequired("username");
+    validation.validateRequired("password");
+
+    const validationResult = validation.validate();
+
+    if(!validation.success) {
+        return res.json(responseGenerator.validation(validationResult));
+    }
+
+    const userResults:ModelCollection = await (new User).all()
+                                                    .where("username", "=", requestBody.username, true)
+                                                    .fetchModels();
+
+    const user:User = userResults.first();
+
+    if(!user) {
+        return res.json(responseGenerator.failure("Authentication failed"));
+    }
+
+    const validPassword = await Hashing.compare(requestBody.password, user.getColumn("password"));
+
+    if(!validPassword) {
+        return res.json(responseGenerator.failure("Authentication failed"));
+    }
+
+    // Sign and register JWT in the session with users ID
+    jwt.sign({
+        "user_id": user.getColumn("id")
+    }, req);
+
+    next();
+}
+```
+
+You can then apply the AuthFilter to a route in order to verify the JWT and retrieve the signed data.
+
+*api/routes/UserRoutes.ts*
+```typescript
+'use strict';
+import { Express } from "express";
+
+import { AuthFilter} from './../filters/AuthFilter';
+
+module.exports = function(app:Express) {
+    const userController = require('../controllers/UserController');
+
+    //AuthFilter applied to all /user routes
+    app.all('/users',AuthFilter);
+    app.route('/users')
+        .get(userController.get_users);
+        
+};
+```
+
+If the JWT is successfully verified, then the data will be available via the request object in the controller.
+
+*api/routes/UserController.ts*
+```typescript
+exports.get_users = async function(req:Request, res:Response, next:NextFunction) {
+
+    /**
+     * {
+     *      user_id: 1
+     * }
+     */
+    const userData = req['currentUser'];
+
+    res.json(responseGenerator.success("foo"));
+    next();
+};
+```
