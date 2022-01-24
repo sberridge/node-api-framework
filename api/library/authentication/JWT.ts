@@ -1,7 +1,6 @@
 import { Request } from "express";
-
-const randomString = require('crypto-random-string');
-const crypto = require('crypto');
+import * as randomString from 'crypto-random-string';
+import * as crypto from 'crypto';
 export class JWT {
     private key: string
     constructor() {
