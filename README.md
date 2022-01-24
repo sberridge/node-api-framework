@@ -111,3 +111,83 @@ exports.get_users = async function(req:Request, res:Response, next:NextFunction)
     next();
 };
 ```
+
+### Response Generation
+
+Standardised responses can be generated using the ResponseGenerator module.
+
+```typescript
+'use strict';
+import { NextFunction, Request, Response } from 'express';
+import { ResponseGenerator } from './../library/ResponseGenerator';
+import { Validator } from './../library/validation/Validator';
+var responseGenerator:ResponseGenerator = require('./../library/ResponseGenerator');
+
+exports.get_users = async function(req:Request, res:Response, next:NextFunction) {
+    /**
+     * {
+     *      "success": true
+     *      "message": "message"
+     * }
+     */
+    responseGenerator.success("message");
+
+    /**
+     * {
+     *      "success": true,
+     *      "rows": [
+     *          {
+     *              "name": "bob
+     *          }
+     *      ],
+     *      "total_rows": 100
+     * }
+     */
+    responseGenerator.success([
+        {
+            "name": "bob"
+        }
+    ], 100);
+
+
+    /**
+     * {
+     *      "success": true,
+     *      "row": {
+     *          "name": "bob
+     *      }      
+     * }
+     */
+    responseGenerator.success({
+        "name": "bob"
+    });
+
+
+    /**
+     * {
+     *      "success": false,
+     *      "message": "message"      
+     * }
+     */
+    responseGenerator.failure("message");
+
+
+
+    let validator = new Validator({});
+    validator.validateRequired("name");
+    let validationResult = await validator.validate();
+
+    /**
+     * {
+     *      "success": false,
+     *      "validation": {
+     *          "name": "required"
+     *      }
+     * }
+     */
+    responseGenerator.validation(validationResult);
+
+
+    next();
+};
+```
