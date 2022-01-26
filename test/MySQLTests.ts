@@ -253,7 +253,7 @@ describe('MySQLTests',function(){
                     db.join('genders','genders.id','users.gender_id');
                     db.weightedWhere('cities.city','=','Derby',100,0,true);
                     db.weightedWhere('cities.city','=','Wolverhampton',50,db.subWeightedWhere("genders.gender","=","male",40,0,true),true);
-                    db.whereIn('cities.city',["derby","Wolverhampton","Nottingham"]);
+                    db.whereIn('cities.city',["derby","Wolverhampton","Nottingham"], true);
                     var results = await db.fetch();
                     selectQuery = db.generateSelect().trim();
                     expect(selectQuery).to.match(/^SELECT(?: )+\*,if\((?: )+cities\.city(?: )+\=(?: )+\?(?: )+,(?: )+100,(?: )+0\)(?: )+\+(?: )+if\((?: )+cities\.city(?: )+\=(?: )+\?(?: )+,(?: )+50,(?: )+if\((?: )+genders\.gender(?: )+\=(?: )+\?(?: )+,(?: )+40,(?: )+0\)\) \_\_condition\_weight\_\_,if\((?: )+cities\.city(?: )+\=(?: )+\?(?: )+,(?: )+100,(?: )+0\)(?: )+\+(?: )+if\((?: )+cities\.city(?: )+\=(?: )+\?(?: )+,(?: )+50,(?: )+if\((?: )+genders\.gender(?: )+\=(?: )+\?(?: )+,(?: )+40,(?: )+0\)\)(?: )+__condition_weight__(?: )+FROM(?: )+users(?: )+JOIN(?: )+cities(?: )+ON(?: )+cities\.id(?: )+\=(?: )+users\.city_id(?: )+JOIN(?: )+genders(?: )+ON(?: )+genders\.id(?: )+\=(?: )+users\.gender_id(?: )+WHERE(?: )+cities\.city(?: )+IN(?: )+\(\?,\?,\?\)(?: )+ORDER BY(?: )+__condition_weight__(?: )+desc,__condition_weight__(?: )+desc$/);

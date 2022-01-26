@@ -46,7 +46,7 @@ import { comparison, pagination } from './SQLTypes';
 
         whereNotNull(field : string) : iSQL
 
-        whereIn(field : string, subQuery : any) : iSQL
+        whereIn(field : string, subQuery : iSQL) : iSQL
         whereIn(field : string, values : any[], escape : boolean) : iSQL
 
         weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: WeightedCondition, escape : boolean) : iSQL

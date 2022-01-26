@@ -396,10 +396,330 @@ dataConnection.table("users")
     ])
     .save().then(result=>{
         const rowsInserted: number = result.rows_affected;
-        const insertId: number = result.insert_id;
+        const firstInsertedId: number = result.insert_id;
     })
+```
+
+#### Postgres and Auto Incrementing Fields
+
+When inserting records into a table containing an auto incrementing field in a Postgres database, that field must be specified in order for it to be returned in the "insert_id" property of the result.
+
+```typescript
+dataConnection.table("users")
+    .setIncrementingField("id")
+    .insert({
+        "name": "Bob"
+    })
+    .save().then(result=>{
+        const rowsInserted: number = result.rows_affected;
+        const insertId: number = result.insert_id;
+    });
+```
+
+### Updating Records
+
+Updating records is done in a similar fashion to inserting, except with using the "update" function rather than "insert".
+
+The example below will update all records in the table. See "filtering" below to see how to add conditions.
+
+```typescript
+dataConnection.table("users")
+    .update({
+        "name": "Bob"
+    })
+    .save().then(result=>{
+        const rowsUpdated: number = result.rows_affected;
+    });
+```
+
+### Deleting Records
+
+Deleting records can be done using the "delete" function.
+
+The example below will delete all records in the table. See "filtering" below to see how to add conditions.
+
+```typescript
+dataConnection.table("users")
+    .delete().then(result=>{
+        const rowsDeleted: number = result.rows_affected;
+    });
 ```
 
 #### Filtering
 
-Various "where" functions are available to filter the results of a fetch query
+Various "where" functions are available to filter the results of a fetch query.
+
+##### Basic Where
+
+```typescript
+dataConnection.table("users");
+dataConnection.cols([
+    "id", 
+    "name"
+]);
+
+//basic where clause
+//field, comparison symbol, value, boolean to control whether or not to parametise the value or use as is
+dataConnection.where("id", "=", 1, true);
+
+dataConnection.where("id", "!=", 1, true);
+dataConnection.where("id", ">", 1, true);
+dataConnection.where("id", "<", 1, false);
+dataConnection.where("id", "<=", 1, true);
+dataConnection.where("id", ">=", 1, true);
+dataConnection.where("id", "<>", 1, true);
+dataConnection.where("id", "LIKE", 1, true);
+dataConnection.where("id", "NOT LIKE", 1, false);
+
+dataConnection.fetch().then(res=>{
+
+})
+
+/**
+ * SELECT
+ *  id, name
+ * FROM users
+ * WHERE
+ *  id = ?
+ * AND
+ *  id > ?
+ * AND
+ *  id < 1
+ * AND
+ *  id <= ?
+ * AND
+ *  id >= ?
+ * AND
+ *  id <> ?
+ * AND
+ *  id LIKE ?
+ * AND
+ *  id NOT LIKE 1
+ */
+```
+
+##### Where In
+
+To check if a field matches a list of values, use the Where In function.
+
+```typescript
+//field, list of values to check against, boolean to determine whether or not the parametise the values 
+dataConnection.whereIn("id", [1,2,3], true);
+
+dataConnection.whereIn("id", [1,2,3], false);
+
+/**
+ * WHERE
+ *  id IN (?, ?, ?)
+ * AND
+ *  id IN (1, 2, 3)
+ */
+```
+
+###### Where In Sub Query
+
+You can use the Where In function with a sub query to fetch rows matching the results of another query.
+
+```typescript
+//the newQuery function will start a new query on the same database
+const subQuery = dataConnection.newQuery();
+
+subQuery.table("users")
+    .cols(["id"])
+    .where("id", "=", 1, true);
+
+dataConnection.whereIn("id", subQuery);
+
+/**
+ * WHERE IN (
+ *  SELECT id FROM users WHERE id = ?
+ * )
+ */
+```
+
+##### Where Null
+
+Do null comparisons using whereNull and whereNotNull
+
+```typescript
+dataConnection.whereNull("name");
+
+dataConnection.whereNotNull("name");
+
+/**
+ * WHERE name IS NULL AND name IS NOT NULL
+ */
+```
+
+##### Changing Logic
+
+Logic can be switched between OR and AND using the appropriate function.
+
+```typescript
+dataConnection.where("id", "=", 1, true);
+dataConnection.or();
+dataConnection.where("id", "=", 2, true);
+dataConnection.and();
+dataConnection.where("active", "=", 1, true);
+
+/**
+ * WHERE id = ? OR id = ? AND active = ?
+ */
+```
+
+##### Bracketing Logic
+
+Some complex conditions may require the use of brackets, this can be accomplished with the bracket functions.
+
+```typescript
+
+dataConnection.openBracket();
+
+dataConnection.where("id", "=", 1, true);
+
+dataConnection.or();
+
+dataConnection.where("id", "=", 2, true);
+
+dataConnection.closeBracket();
+
+dataConnection.and();
+
+dataConnection.where("active", "=", 1, true);
+
+/**
+ * WHERE ( id = ? OR id = ? ) AND active = ?
+ */
+```
+
+##### Weighted Where
+
+"Weighted" wheres allow you to order results based on certain conditions, for example if you wanted to return all records matching a certain query first, followed by rows matching another query before finally returning all other rows.
+
+Can be useful when implementing search logic.
+
+This is accomplished using the weightedWhere functions.
+
+```typescript
+//results are assigned a value depending on whether or not they match the criteria
+//field, comparison symbol, value, value to assign if matching, value to assign if not matching, boolean to control whether or not to parametise 
+dataConnection.weightedWhere("name", "=", "CEO", 10, 5, true);
+dataConnection.weightedWhere("name", "=", "CTO", 9, 5, true);
+```
+
+In the above example, users with the name "CEO" will be returned first, followed by users name "CTO", then all other users will follow.
+
+###### Sub Weighted Where
+
+You can supply a "sub weighted where" in the place of the 5th argument in order to apply if else style conditions, for example
+
+```typescript
+const secondCondition:WeightedCondition = dataConnection.subWeightedWhere("name", "=", "CTO", 9, 5, true);
+
+dataConnection.weightedWhere("name", "=", "CEO", 10, secondCondition, true);
+```
+
+### Table Joins
+
+#### Basic Joins
+```typescript
+dataConnection.join("posts", "users.id", "users.id");
+
+dataConnection.leftJoin("hobbies", "users.id", "hobbies.user_id");
+```
+
+#### Sub Query Join
+
+You can supply a sub query instead of a table name to perform a sub query join.
+
+```typescript
+const subQuery = dataConnection.newQuery();
+
+subQuery.table("posts")
+    .cols(["id", "message", "user_id"])
+    .where("date", ">", "2022-01-01", true);
+
+dataConnection.join(subQuery, "table_alias", "users.id", "table_alias.user_id");
+```
+
+#### Complex Join Conditions
+
+All of the join varieties above allow for a callback to apply more complex conditions.
+
+```typescript
+dataConnection.join("posts", (query)=>{
+    query.on("users.id", "=" "posts.user_id");
+
+    query.openBracket();
+
+    query.on("date", ">", "2022-01-01", true);
+    query.or();
+    query.on("featured", "=", 1, true);
+
+    query.closeBracket();
+})
+```
+
+### Ordering
+
+```typescript
+dataConnection.order("field", "asc");
+dataConnection.order("field2", "desc");
+```
+
+### Limiting and Offsetting
+
+```typescript
+dataConnection.limit(10);
+dataConnection.offset(10);
+```
+
+### Grouping
+
+```typescript
+dataConnection.group(["field1", "field2"]);
+```
+
+### Pagination
+
+A pagination function exists for quick pagination of results.
+
+```typescript
+//per page, current page
+const paginationResult = await dataConnection.paginate(10, 1);
+
+const totalRows = paginationResult.total_rows;
+
+const results = await dataConnection.fetch();
+
+
+const rows = results.rows; //first 10 rows
+```
+
+### Counting Results
+
+```typescript
+const totalRows = await dataConnection.count();
+```
+
+### Streaming Results
+
+For queries with larger datasets, it's often advantageous to stream the results.
+
+```typescript
+//stream the results 100 rows at a time
+await dataConnection.stream(100, (results)=>{
+    return new Promise((resolve, reject)=>{
+
+        //when finished with the result set, resolve the promise
+
+        resolve();
+    })
+});
+
+//stream finished
+```
+
+## Modelling
+
+To do
