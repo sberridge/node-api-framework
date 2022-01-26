@@ -721,5 +721,339 @@ await dataConnection.stream(100, (results)=>{
 ```
 
 ## Modelling
+Models are classes designed to handle logic for a single database table record.
 
-To do
+The modal classes should be stored in api/models.
+
+Below is an example of a simple "User" model.
+
+*api/models/User.ts*
+```typescript
+import { BaseModel } from './../library/modelling/BaseModel';
+
+export class User extends BaseModel {
+    constructor() { 
+        super("test", User.table, User.fields.id, Object.keys(User.fields));
+
+        //if model is for a Postgres database then, if applicable, you will need to specify an auto incrementing field
+
+        this.setIncrementingField(User.fields.id);
+
+    }
+
+    static table = "users";
+
+    static fields = {
+        "id": "id",
+        "name": "name"
+    }
+
+}
+```
+
+All models should extend the library/modelling/BaseModel class which provides functionality with the underlying data access library.
+
+The constructor should pass the name of the database, the table, the primary key of the table, and a list of table fields.
+
+### Finding Records using Models
+
+Once created, a model class can be used to interact with the database to perform actions such as fetching, creating, updating, and deleting records.
+
+To find a record, you can use the "find" function on the model.
+
+```typescript
+import { User } from './../models/User';
+
+const myUser = await (new User).find(1);
+
+if(!myUser) {
+    //error, user not found
+}
+
+const userName = myUser.getColumn("name");
+```
+
+You can also return multiple models.
+
+```typescript
+import { User } from './../models/User';
+
+const modelCollection = await (new User).all()
+    .where("name","LIKE", "bob%", true)
+    .fetchModels();
+
+for(const user of modelCollection) {
+    const thisUserName = user.getColumn("name");
+}
+```
+
+If working with a lot of records, then the streamModels function can be used instead.
+
+```typescript
+await (new User).all()
+    .where("name","LIKE", "bob%", true)
+    .streamModels(100, (modelCollection)=>{
+        return new Promise((resolve,reject)=>{
+            for(let user of modelCollection) {
+                //do something with user
+            }
+            resolve();
+        });
+    });
+```
+
+### Creating Records
+
+Model classes can also be used to create new records
+
+```typescript
+let myUser = new User();
+
+myUser.updateColumn("name", "Bob");
+myUser.updateColumns({
+    "address": "123 Fake Street",
+    "postcode": "IE12 ASE"
+});
+
+let saved = await myUser.save(); //true or false
+```
+
+### Updating Records
+
+To update a record, simply update the columns on an existing model, and then call the save function.
+
+```typescript
+let user = await (new User).find(1);
+
+user.updateColumns({
+    "name": "New name"
+});
+
+let saved = await user.save();
+```
+
+### Deleting Records
+
+To delete a record, simply use the delete function on an existing model.
+
+```typescript
+let user = await (new User).find(1);
+
+let deleted = await user.delete();
+```
+
+### Model Relationships
+You can define relationships between different models in their respective classes to link records together
+
+There are 4 relation types available:
+
+* BelongsTo (Many to One)
+* HasOne (One to One)
+* HasMany (One to Many)
+* BelongsToMany (Many to Many)
+
+#### BelongsTo
+
+BelongsTo defines a "Many to One" relationship, wherein this model belongs to a record which could own one or more records from this models table.
+
+*api/models/User.ts*
+```typescript
+import { BaseModel } from './../library/modelling/BaseModel';
+import { UserGroup } from './UserGroup';
+
+export class User extends BaseModel {
+    constructor() { 
+        super("test", User.table, User.fields.id, Object.keys(User.fields));
+    }
+
+    static table = "users";
+
+    static fields = {
+        "id": "id",
+        "name": "name",
+        "user_group_id": "user_group_id"
+    }
+
+    public userGroup() {
+        return this.belongsTo(UserGroup, User.fields.user_group_id);
+    }
+
+}
+```
+
+##### Use Relationship
+
+```typescript
+const user = <User>await (new User()).find(1);
+
+const userGroup = await user.userGroup().getResult();
+
+const groupName = userGroup.getColumn(UserGroup.fields.name);
+```
+
+#### HasOne
+
+HasOne defines a "One to One" relationship, wherein this model ones a single record from another table.
+
+```typescript
+import { BaseModel } from './../library/modelling/BaseModel';
+import { UserSettings } from './UserSettings';
+export class User extends BaseModel {
+    constructor() { 
+        super("test", User.table, User.fields.id, Object.keys(User.fields));
+    }
+
+    static table = "users";
+
+    static fields = {
+        "id": "id",
+        "name": "name"
+    }
+
+    public userSettings() {
+        return this.hasOne(UserSettings, UserSettings.fields.user_id);
+    }
+
+}
+```
+
+##### Use Relationship
+
+```typescript
+const user = <User>await (new User()).find(1);
+
+const userSettings = await user.userSettings().getResult();
+
+const theme = userGroup.getColumn(UserSettings.fields.theme_name);
+```
+
+#### HasMany
+
+HasMany defines a "One to Many" relationship, wherein this model ones a multiple records from another table.
+
+This is essentially the opposite relationship to "BelongsTo"
+
+```typescript
+import { BaseModel } from './../library/modelling/BaseModel';
+import { Hobby } from './Hobby';
+export class User extends BaseModel {
+    constructor() { 
+        super("test", User.table, User.fields.id, Object.keys(User.fields));
+    }
+
+    static table = "users";
+
+    static fields = {
+        "id": "id",
+        "name": "name"
+    }
+
+    public hobbies() {
+        return this.hasMany(Hobby, Hobby.fields.user_id);
+    }
+
+}
+```
+
+##### Use Relationship
+
+```typescript
+const user = <User>await (new User()).find(1);
+
+const userHobbies:ModelCollection = await user.hobbies().getResults();
+
+for(const hobby of userHobbies) {
+    const hobbyName = hobby.getColumn("hobby");
+}
+```
+
+#### BelongsToMany
+
+BelongsToMany defines a "Many to Many" relationship, where in this model owns multiple records from another table, and where the records in that table also own multiple records in *this* table.
+
+BelongsToMany relationships are supported by a "link table" which joins records from one table with records from another.
+
+*Table: users*
+|field|type|
+|-----|----|
+|id|int|
+|name|varchar|
+
+*Table: events*
+|field|type|
+|-----|----|
+|id|int|
+|name|varchar|
+|date|date|
+
+*Table: user_event*
+|field|type|
+|-----|----|
+|id|int|
+|user_id|int|
+|event_id|int|
+
+Above we have three tables, a users table, an events table, and then a user_event table which links records from those tables together.
+
+We can define this relationship in the User model like so:
+
+```typescript
+import { BaseModel } from './../library/modelling/BaseModel';
+import { Event } from './Event';
+export class User extends BaseModel {
+    constructor() { 
+        super("test", User.table, User.fields.id, Object.keys(User.fields));
+    }
+
+    static table = "users";
+
+    static fields = {
+        "id": "id",
+        "name": "name"
+    }
+
+public events() {
+    return this.belongsToMany(Event, "user_event", "user_id", "event_id");
+}
+
+}
+```
+
+##### Use Relationship
+
+```typescript
+const user = <User>await (new User()).find(1);
+
+const userEvents:ModelCollection = await user.events().getResults();
+
+for(const event of userEvents) {
+    const eventDate = event.getColumn("date");
+}
+```
+
+##### Link Columns
+
+Since BelongsToMany relationships involve a link table, it can often be the case where additional information is stored in the link table which will also need to be returned.
+
+These fields from the link table can also be set in the relationship so that they are returned as "additional columns".
+
+*api/models/User.ts*
+```typescript
+public events() {
+    let relationship = this.belongsToMany(Event, "user_event", "user_id", "event_id");
+    relationship.setLinkColumns(["paid"]);
+    return relationship;
+}
+```
+
+It will then be possible to access these fields from the results of the relationship.
+
+```typescript
+const user = <User>await (new User()).find(1);
+
+const userEvents:ModelCollection = await user.events().getResults();
+
+for(const event of userEvents) {
+    const paid:number = event.getAdditionalColumn("paid");
+}
+```
