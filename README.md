@@ -1012,9 +1012,9 @@ export class User extends BaseModel {
         "name": "name"
     }
 
-public events() {
-    return this.belongsToMany(Event, "user_event", "user_id", "event_id");
-}
+    public events() {
+        return this.belongsToMany(Event, "user_event", "user_id", "event_id");
+    }
 
 }
 ```
