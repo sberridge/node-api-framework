@@ -285,3 +285,121 @@ exports.get_users = async function(req:Request, res:Response, next:NextFunction)
     next();
 };
 ```
+
+## Data Access
+
+The framework features a fairly extensive library for handling interactions with SQL databases.
+
+### Configuring Database Connections
+
+Database connections are configured within the "databases"."sql" section of the app config.
+
+```json
+{
+    "databases": {
+        "sql": {
+            "my_database": {
+                "type": "MySQL",
+                "host": "localhost",
+                "database": "test",
+                "port": 3306,
+                "user": "root",
+                "password": ""
+            }
+        }
+    }
+}
+```
+
+You can have multiple database connections defined in the config, with each one being identified by it's key within the "sql" object.
+
+For example, above we have a MySQL database identified by the name "my_database.
+
+The "type" of the database determines which SQL driver will be used, the currently supported drivers are:
+
+* MySQL
+* Postgres
+* MSSQL
+
+### Connecting to the Database
+
+The library features a "factory" style interface for initiating database connections with one of the predefined databases.
+
+*assumed running from a controller*
+```typescript
+import { DataAccessFactory } from "./../library/data-access/factory";
+
+//uses the singleton pattern to keep the factory contained to a single shared instance
+const dataFactory:DataAccessFactory = require("./../library/data-access/factory");
+
+exports.get_users = function(req:Request, res:Response, next:NextFunction) {
+
+    //initiate a database connection using the create function with the name defined in the config
+    const dataConnection = dataFactory.create("my_database");
+
+    next();
+}
+```
+
+### Selecting from a Table
+
+```typescript
+const dataConnection = dataFactory.create("my_database");
+
+dataConnection.table("users");
+dataConnection.cols([
+    "id", 
+    "name"
+]);
+
+dataConnection.fetch().then(result=>{
+    if(!result.success) {
+        return result.error;
+    }
+    const rows = result.rows;
+    /**
+     * [
+     *      {
+     *          "id": 1,
+     *          "name": "Bob"
+     *      }
+     * ]
+     */
+    console.log(rows);
+})
+```
+
+### Inserting Rows
+
+The "insert" and "save" functions are used to create new database records.
+
+```typescript
+//insert single row
+dataConnection.table("users")
+    .insert({
+        "name": "Bob"
+    })
+    .save().then(result=>{
+        const rowsInserted: number = result.rows_affected;
+        const insertId: number = result.insert_id;
+    });
+
+//insert multiple rows
+dataConnection.table("users")
+    .insert([
+        {
+            "name": "George"
+        },
+        {
+            "name": "Lauren"
+        }
+    ])
+    .save().then(result=>{
+        const rowsInserted: number = result.rows_affected;
+        const insertId: number = result.insert_id;
+    })
+```
+
+#### Filtering
+
+Various "where" functions are available to filter the results of a fetch query

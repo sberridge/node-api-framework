@@ -675,7 +675,7 @@ export class PostgresData implements iSQL {
                             result.rows_affected = results.rowCount;
                             result.rows_changed = results.rowCount;
                             if(this.incrementingField) {
-                                result.insert_id = results.rows[results.rows.length-1][results.fields[0].name]
+                                result.insert_id = results.rows[0][results.fields[0].name]
                             }
                         } else if(["UPDATE", "DELETE"].includes(results.command)) {
                             result.rows_affected = results.rowCount;
