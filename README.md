@@ -447,7 +447,7 @@ dataConnection.table("users")
 
 ### Filtering
 
-Various "where" functions are available to filter the results of a fetch or update query.
+Various "where" functions are available to filter the results of a fetch, update, or delete query.
 
 #### Basic Where
 
