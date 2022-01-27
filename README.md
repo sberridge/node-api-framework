@@ -1130,8 +1130,8 @@ const userEvents:ModelCollection = await userHobbiesRelation.getResults();
 #### EagerLoading Relations
 EagerLoading is a technique which allows for the efficient preloading of related records, this is useful for two purposes:
 
-# Loading data for multiple models without having to fetch relations individually
-# Loading data to be returned in the response
+* Loading data for multiple models without having to fetch relations individually
+* Loading data to be returned in the response
 
 
 ```typescript
