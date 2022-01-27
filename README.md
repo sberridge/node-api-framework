@@ -1179,7 +1179,8 @@ for(const user of users) {
  *                  ]
  *              }
  *          }
- *      ]
+ *      ],
+ *      "total_rows": 100
  * }
  */
 return res.json(responseGenerator.success(users.toJSON(), totalRows));
