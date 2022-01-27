@@ -778,7 +778,7 @@ You can also return multiple models.
 ```typescript
 import { User } from './../models/User';
 
-const modelCollection = await (new User).all()
+const modelCollection: ModelCollection = await (new User).all()
     .where("name","LIKE", "bob%", true)
     .fetchModels();
 
@@ -840,6 +840,38 @@ To delete a record, simply use the delete function on an existing model.
 let user = await (new User).find(1);
 
 let deleted = await user.delete();
+```
+
+### Converting Models to JSON
+
+It is usually the case that an API route is going to be returning data from the database, the modelling system can accommodate for this use case with the "toJSON" function which can be used on either an individual model, or a model collection.
+
+*Individual Model*
+```typescript
+const json = user.toJSON();
+/**
+ * {
+ *      "id": 1,
+ *      "name": "Bob"
+ * }
+ */
+```
+
+*Model Collection*
+```typescript
+const json = users.toJSON();
+/**
+ * [
+ *      {
+ *          "id": 1,
+ *          "name": "Bob"
+ *      },
+ *      {
+ *          "id": 2,
+ *          "name": "James"
+ *      }
+ * ]
+ */
 ```
 
 ### Model Relationships
@@ -1056,4 +1088,99 @@ const userEvents:ModelCollection = await user.events().getResults();
 for(const event of userEvents) {
     const paid:number = event.getAdditionalColumn("paid");
 }
+```
+
+#### Manipulating Relationships
+
+By default, by using a relationship you are going to return all of the related records.
+
+You can change this by either adding constraints to the relationship within the model, or by adding constraints as you are using the relationship.
+
+##### Add Constraints within Model
+
+```typescript
+public hobbies() {
+    let relationship = this.hasMany(Hobby, Hobby.fields.user_id);
+
+    //remove unneeded columns from the query and only return favourited hobbies
+    relationship.getQuery()
+        .removeCols([
+            `${Hobby.table}.${Hobby.description}`
+        ])
+        .where("favourite", "=", 1, true);
+
+    return relationship;
+}
+```
+
+##### Adding Constraints After
+
+```typescript
+let userHobbiesRelation:BelongsToMany = user.hobbies();
+
+userHobbiesRelation.getQuery()
+    .removeCols([
+        `${Hobby.table}.${Hobby.description}`
+    ])
+    .where("favourite", "=", 1, true);
+
+const userEvents:ModelCollection = await userHobbiesRelation.getResults();
+```
+
+#### EagerLoading Relations
+EagerLoading is a technique which allows for the efficient preloading of related records, this is useful for two purposes:
+
+# Loading data for multiple models without having to fetch relations individually
+# Loading data to be returned in the response
+
+
+```typescript
+const users:ModelCollection = await (new Users).all().FetchModels();
+
+await users.eagerLoad(new Map([
+    ["hobbies", (query)=>{
+        query.where("favourite", "=", 1, true);
+        return query;
+    }],
+    ["city.parties", (query)=>{
+        query.where("parties.date", ">", "2022-01-01", true);
+        return query;
+    }]
+]));
+
+for(const user of users) {
+    const hobbies = user.getRelation("hobbies");
+    const city = user.getRelation("city");
+    const cityParties = city.getRelation("parties");
+}
+
+/**
+ * {
+ *      "success": true,
+ *      "rows": [
+ *          {
+ *              "id": 1,
+ *              "name": "Bob",
+ *              "hobbies": [
+ *                  {
+ *                      "id": 1,
+ *                      "hobby": "Origami",
+ *                      "favourite": 1
+ *                  }
+ *              ],
+ *              "city": {
+ *                  "id": 1,
+ *                  "city": "Lisbon",
+ *                  "parties": [
+ *                      {
+ *                          "id": 1,
+ *                          "date": "2022-02-01"
+ *                      }
+ *                  ]
+ *              }
+ *          }
+ *      ]
+ * }
+ */
+return res.json(responseGenerator.success(users.toJSON(), totalRows));
 ```
