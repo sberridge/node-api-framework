@@ -445,11 +445,11 @@ dataConnection.table("users")
     });
 ```
 
-#### Filtering
+### Filtering
 
 Various "where" functions are available to filter the results of a fetch query.
 
-##### Basic Where
+#### Basic Where
 
 ```typescript
 dataConnection.table("users");
@@ -498,7 +498,7 @@ dataConnection.fetch().then(res=>{
  */
 ```
 
-##### Where In
+#### Where In
 
 To check if a field matches a list of values, use the Where In function.
 
@@ -516,7 +516,7 @@ dataConnection.whereIn("id", [1,2,3], false);
  */
 ```
 
-###### Where In Sub Query
+##### Where In Sub Query
 
 You can use the Where In function with a sub query to fetch rows matching the results of another query.
 
@@ -537,7 +537,7 @@ dataConnection.whereIn("id", subQuery);
  */
 ```
 
-##### Where Null
+#### Where Null
 
 Do null comparisons using whereNull and whereNotNull
 
@@ -551,7 +551,7 @@ dataConnection.whereNotNull("name");
  */
 ```
 
-##### Changing Logic
+#### Changing Logic
 
 Logic can be switched between OR and AND using the appropriate function.
 
@@ -567,7 +567,7 @@ dataConnection.where("active", "=", 1, true);
  */
 ```
 
-##### Bracketing Logic
+#### Bracketing Logic
 
 Some complex conditions may require the use of brackets, this can be accomplished with the bracket functions.
 
@@ -592,7 +592,7 @@ dataConnection.where("active", "=", 1, true);
  */
 ```
 
-##### Weighted Where
+#### Weighted Where
 
 "Weighted" wheres allow you to order results based on certain conditions, for example if you wanted to return all records matching a certain query first, followed by rows matching another query before finally returning all other rows.
 
@@ -609,7 +609,7 @@ dataConnection.weightedWhere("name", "=", "CTO", 9, 5, true);
 
 In the above example, users with the name "CEO" will be returned first, followed by users name "CTO", then all other users will follow.
 
-###### Sub Weighted Where
+##### Sub Weighted Where
 
 You can supply a "sub weighted where" in the place of the 5th argument in order to apply if else style conditions, for example
 
