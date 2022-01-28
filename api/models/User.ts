@@ -9,40 +9,44 @@ import { Party } from './Party';
 
 export class User extends BaseModel {
     constructor() { 
-        super("test","users","id",[
-            "id",
-            "first_name",
-            "surname",
-            "email",
-            "title_id",
-            "gender_id",
-            "date_of_birth",
-            "phone_number",
-            "city_id",
-            "country_id",
-            "postcode",
-            "street_address"
-        ]);
+        super("test",User.table,User.fields.id,Object.values(User.fields));
     }
 
+    static table = "users";
+
+    static fields = {
+        "id": "id",
+        "first_name": "first_name",
+        "surname": "surname",
+        "email": "email",
+        "title_id": "title_id",
+        "gender_id": "gender_id",
+        "date_of_birth": "date_of_birth",
+        "phone_number": "phone_number",
+        "city_id": "city_id",
+        "country_id": "country_id",
+        "postcode": "postcode",
+        "street_address": "street_address"
+    };
+
     public city() {
-        return this.belongsTo(City,"city_id");
+        return this.belongsTo(City,User.fields.city_id);
     }
     
     public gender() {
-        return this.belongsTo(Gender,"gender_id");
+        return this.belongsTo(Gender,User.fields.gender_id);
     }
     
     public country() {
-        return this.belongsTo(Country,"country_id");
+        return this.belongsTo(Country,User.fields.country_id);
     }
     
     public title() {
-        return this.belongsTo(Title,"title_id");
+        return this.belongsTo(Title,User.fields.title_id);
     }
 
     public settings() {
-        return this.hasOne(UserSettings,"user_id");
+        return this.hasOne(UserSettings,UserSettings.fields.user_id);
     }
 
     public parties() {

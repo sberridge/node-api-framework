@@ -67,10 +67,9 @@ Controllers should be added to api/controllers and imported into the relevant ro
 'use strict';
 import { NextFunction, Request, Response } from 'express';
 import { ResponseGenerator } from './../library/ResponseGenerator';
-const responseGenerator:ResponseGenerator = require('./../library/ResponseGenerator');
 
 exports.get_users = async function(req:Request, res:Response, next:NextFunction) {
-    res.json(responseGenerator.success("It works!");
+    res.json(ResponseGenerator.success("It works!");
     next();
 };
 ```
@@ -104,10 +103,10 @@ exports.get_users = async function(req:Request, res:Response, next:NextFunction)
 
     let validationResult = await validator.validate();
     if(!validator.success) {
-        return res.json(responseGenerator.validation(validationResult));
+        return res.json(ResponseGenerator.validation(validationResult));
     }
 
-    res.json(responseGenerator.success("Valid!");
+    res.json(ResponseGenerator.success("Valid!");
     next();
 };
 ```
@@ -121,7 +120,6 @@ Standardised responses can be generated using the ResponseGenerator module.
 import { NextFunction, Request, Response } from 'express';
 import { ResponseGenerator } from './../library/ResponseGenerator';
 import { Validator } from './../library/validation/Validator';
-var responseGenerator:ResponseGenerator = require('./../library/ResponseGenerator');
 
 exports.get_users = async function(req:Request, res:Response, next:NextFunction) {
     /**
@@ -130,7 +128,7 @@ exports.get_users = async function(req:Request, res:Response, next:NextFunction)
      *      "message": "message"
      * }
      */
-    responseGenerator.success("message");
+    ResponseGenerator.success("message");
 
     /**
      * {
@@ -143,7 +141,7 @@ exports.get_users = async function(req:Request, res:Response, next:NextFunction)
      *      "total_rows": 100
      * }
      */
-    responseGenerator.success([
+    ResponseGenerator.success([
         {
             "name": "bob"
         }
@@ -158,7 +156,7 @@ exports.get_users = async function(req:Request, res:Response, next:NextFunction)
      *      }      
      * }
      */
-    responseGenerator.success({
+    ResponseGenerator.success({
         "name": "bob"
     });
 
@@ -169,7 +167,7 @@ exports.get_users = async function(req:Request, res:Response, next:NextFunction)
      *      "message": "message"      
      * }
      */
-    responseGenerator.failure("message");
+    ResponseGenerator.failure("message");
 
 
 
@@ -185,7 +183,7 @@ exports.get_users = async function(req:Request, res:Response, next:NextFunction)
      *      }
      * }
      */
-    responseGenerator.validation(validationResult);
+    ResponseGenerator.validation(validationResult);
 
 
     next();
@@ -220,7 +218,7 @@ exports.login = async function(req:Request, res:Result, next:NextFunction) {
     const validationResult = validation.validate();
 
     if(!validation.success) {
-        return res.json(responseGenerator.validation(validationResult));
+        return res.json(ResponseGenerator.validation(validationResult));
     }
 
     const userResults:ModelCollection = await (new User).all()
@@ -230,13 +228,13 @@ exports.login = async function(req:Request, res:Result, next:NextFunction) {
     const user:User = userResults.first();
 
     if(!user) {
-        return res.json(responseGenerator.failure("Authentication failed"));
+        return res.json(ResponseGenerator.failure("Authentication failed"));
     }
 
     const validPassword = await Hashing.compare(requestBody.password, user.getColumn("password"));
 
     if(!validPassword) {
-        return res.json(responseGenerator.failure("Authentication failed"));
+        return res.json(ResponseGenerator.failure("Authentication failed"));
     }
 
     // Sign and register JWT in the session with users ID
@@ -281,7 +279,7 @@ exports.get_users = async function(req:Request, res:Response, next:NextFunction)
      */
     const userData = req['currentUser'];
 
-    res.json(responseGenerator.success("foo"));
+    res.json(ResponseGenerator.success("foo"));
     next();
 };
 ```
@@ -733,7 +731,7 @@ import { BaseModel } from './../library/modelling/BaseModel';
 
 export class User extends BaseModel {
     constructor() { 
-        super("test", User.table, User.fields.id, Object.keys(User.fields));
+        super("test", User.table, User.fields.id, Object.values(User.fields));
 
         //if model is for a Postgres database then, if applicable, you will need to specify an auto incrementing field
 
@@ -895,7 +893,7 @@ import { UserGroup } from './UserGroup';
 
 export class User extends BaseModel {
     constructor() { 
-        super("test", User.table, User.fields.id, Object.keys(User.fields));
+        super("test", User.table, User.fields.id, Object.values(User.fields));
     }
 
     static table = "users";
@@ -932,7 +930,7 @@ import { BaseModel } from './../library/modelling/BaseModel';
 import { UserSettings } from './UserSettings';
 export class User extends BaseModel {
     constructor() { 
-        super("test", User.table, User.fields.id, Object.keys(User.fields));
+        super("test", User.table, User.fields.id, Object.values(User.fields));
     }
 
     static table = "users";
@@ -970,7 +968,7 @@ import { BaseModel } from './../library/modelling/BaseModel';
 import { Hobby } from './Hobby';
 export class User extends BaseModel {
     constructor() { 
-        super("test", User.table, User.fields.id, Object.keys(User.fields));
+        super("test", User.table, User.fields.id, Object.values(User.fields));
     }
 
     static table = "users";
@@ -1034,7 +1032,7 @@ import { BaseModel } from './../library/modelling/BaseModel';
 import { Event } from './Event';
 export class User extends BaseModel {
     constructor() { 
-        super("test", User.table, User.fields.id, Object.keys(User.fields));
+        super("test", User.table, User.fields.id, Object.values(User.fields));
     }
 
     static table = "users";
@@ -1183,5 +1181,21 @@ for(const user of users) {
  *      "total_rows": 100
  * }
  */
-return res.json(responseGenerator.success(users.toJSON(), totalRows));
+res.json(ResponseGenerator.success(users.toJSON(), totalRows));
+```
+
+You can also eagerload relationships on a single model.
+
+```typescript
+const user = <User>await (new User()).find(1);
+
+await user.eagerLoad(new Map([
+    ["hobbies", null],
+    ["city.parties": (query)=>{
+        query.where("parties.date", ">", "2022-01-01", true);
+        return query;
+    }]
+]));
+
+res.json(ResponseGenerator.success(user.toJSON()));
 ```

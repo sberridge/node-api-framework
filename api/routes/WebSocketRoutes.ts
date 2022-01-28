@@ -1,8 +1,8 @@
 'use strict';
 import {Express} from 'express';
-import {WSUser, WSControl} from './../library/WSControl'
+import {WSUser, WSControl} from '../library/websockets/WSControl'
 import { JWT } from './../library/authentication/JWT';
-var WSController:WSControl = require("./../library/WSControl");
+var WSController:WSControl = require("./../library/websockets/WSControlFactory");
 
 var JWTLib: JWT = require('../library/authentication/JWT');
 

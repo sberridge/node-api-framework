@@ -4,15 +4,18 @@ import {User} from './User';
 
 export class Party extends BaseModel {
     constructor() {        
-        super("test","parties","id",[
-            "id",
-            "date",
-            "city_id"
-        ]);
+        super("test",Party.table,Party.fields.id,Object.values(Party.fields));
+    }
+
+    static table = "parties";
+    static fields = {
+        "id": "id",
+        "date": "date",
+        "city_id": "city_id"
     }
 
     public city() {
-        return this.belongsTo(City,"city_id");
+        return this.belongsTo(City, Party.fields.city_id);
     }
 
     public guests() {

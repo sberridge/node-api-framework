@@ -3,13 +3,16 @@ import {User} from './User';
 
 export class Country extends BaseModel {
     constructor() {        
-        super("test","countries","id",[
-            "id",
-            "country"
-        ]);
+        super("test",Country.table,Country.fields.id,Object.values(Country.fields));
     }
 
+    static table = "countries";
+    static fields = {
+        "id": "id",
+        "country": "country"
+    };
+
     public users() {
-        return this.hasMany(User,"country_id");
+        return this.hasMany(User,User.fields.country_id);
     }
 }

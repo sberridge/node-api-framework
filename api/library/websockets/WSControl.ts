@@ -44,5 +44,3 @@ export class WSControl {
         });
     }
 }
-
-module.exports = new WSControl();
