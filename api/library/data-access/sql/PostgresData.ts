@@ -271,13 +271,13 @@ export class PostgresData implements iSQL {
             var valueParts = value.split('.');
             value = valueParts.map(function(value,index) {
                 if(reservedWords.indexOf(value.toLowerCase()) > -1) {
-                    return '`' + value + '`';
+                    return '"' + value + '"';
                 }
                 return value;
             }).join('.');
         } else {
             if(reservedWords.indexOf(value.toLowerCase()) > -1) {
-                value = '`' + value + '`';
+                value = '"' + value + '"';
             }
         }
         return value;
@@ -701,22 +701,17 @@ export class PostgresData implements iSQL {
         return this;
     }
 
-    public join(tableName : PostgresData, tableAlias : string, queryFunc : (q: Query) => Query) : PostgresData
-    public join(tableName : PostgresData, tableAlias : string, primaryKey : string, foreignKey : string) : PostgresData
-    public join(tableName : string, queryFunc : (q: Query) => Query) : PostgresData
-    public join(tableName : string, primaryKey : string, foreignKey : string) : PostgresData
-    public join(table : any, arg2 : any, arg3 : any = null, arg4 : any = null) : PostgresData {
+    private addJoin(type: string, table : string | PostgresData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null):void {
         this.joins.push({
-            type: "JOIN",
-            func: (table : any, arg2 : any, arg3 : any = null, arg4 : any = null) => {
+            func: (type: string, table : string | PostgresData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null) => {
                 var tableName = "";
-                var primaryKey;
-                var foreignKey;
+                var primaryKey: string | ((q:Query)=>Query);
+                var foreignKey: string;
                 var params = [];
                 if(typeof table == "string") {
                     tableName = table;
                     primaryKey = arg2;
-                    foreignKey = arg3;
+                    foreignKey = <string>arg3;
                 } else {
                     table.increaseParamNum(this.getParamNum()-1);
                     let startParamNum = table.getParamNum();
@@ -737,20 +732,28 @@ export class PostgresData implements iSQL {
                     query.on(primaryKey,"=",foreignKey);            
                 }
                 return {
-                    type: "JOIN",
+                    type: type,
                     table: tableName,
                     query: query,
                     params: params
                 };
             },
             args: [
+                type,
                 table,
                 arg2,
                 arg3,
                 arg4
             ]
         })
-        
+    }
+
+    public join(tableName : PostgresData, tableAlias : string, queryFunc : (q: Query) => Query) : PostgresData
+    public join(tableName : PostgresData, tableAlias : string, primaryKey : string, foreignKey : string) : PostgresData
+    public join(tableName : string, queryFunc : (q: Query) => Query) : PostgresData
+    public join(tableName : string, primaryKey : string, foreignKey : string) : PostgresData
+    public join(table : string | PostgresData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null) : PostgresData {
+        this.addJoin("JOIN", table, arg2, arg3, arg4);
         return this;
     }
     
@@ -759,51 +762,7 @@ export class PostgresData implements iSQL {
     public leftJoin(tableName : string, queryFunc : (q: Query) => Query) : PostgresData
     public leftJoin(tableName : string, primaryKey : string, foreignKey : string) : PostgresData
     public leftJoin(table : any, arg2 : any, arg3 : any = null, arg4 : any = null) : PostgresData {
-        this.joins.push({
-            type: "LEFT JOIN",
-            func: (table : any, arg2 : any, arg3 : any = null, arg4 : any = null) =>{
-                var tableName = "";
-                var primaryKey;
-                var foreignKey;
-                var params = [];
-                if(typeof table == "string") {
-                    tableName = table;
-                    primaryKey = arg2;
-                    foreignKey = arg3;
-                } else {
-                    table.increaseParamNum(this.getParamNum()-1);
-                    let startParamNum = table.getParamNum();
-                    tableName = "(" + table.generateSelect() + ") " + arg2 + " ";
-                    let paramDif = table.getParamNum() - startParamNum;
-                    this.increaseParamNum(paramDif);
-                    primaryKey = arg3;
-                    foreignKey = arg4;
-                    params = table.getParams();
-                }
-                var query = new Query(true);
-                query.setParamSymbol("$");
-                query.setPrefix("");
-                query.increaseParamNum(1);
-                if(typeof primaryKey != "string") {
-                    primaryKey(query);
-                } else {
-                    query.on(primaryKey,"=",foreignKey);            
-                }
-                return {
-                    type: "LEFT JOIN",
-                    table: tableName,
-                    query: query,
-                    params: params
-                }
-            },
-            args: [
-                table,
-                arg2,
-                arg3,
-                arg4
-            ]
-        })
-        
+        this.addJoin("LEFT JOIN", table, arg2, arg3, arg4);        
         return this;
     }
 

@@ -14,6 +14,22 @@
                 "port": 3306,
                 "user": "root",
                 "password": ""
+            },
+            "mssql": {
+                "type": "MSSQL",
+                "host": "localhost",
+                "database": "test",
+                "port": 1433,
+                "user": "sa",
+                "password": "SuperSecurePassword!"
+            },
+            "postgres": {
+                "type": "Postgres",
+                "host": "localhost",
+                "database": "test",
+                "port": 5433,
+                "user": "postgres",
+                "password": "password"
             }
         }
     }

@@ -1199,3 +1199,6 @@ await user.eagerLoad(new Map([
 
 res.json(ResponseGenerator.success(user.toJSON()));
 ```
+
+## Websocket Support
+

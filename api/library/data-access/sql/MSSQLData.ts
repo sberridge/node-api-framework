@@ -749,23 +749,18 @@ export class MSSQLData implements iSQL {
         return this;
     }
 
-    public join(tableName : MSSQLData, tableAlias : string, queryFunc : (q: Query) => Query) : MSSQLData
-    public join(tableName : MSSQLData, tableAlias : string, primaryKey : string, foreignKey : string) : MSSQLData
-    public join(tableName : string, queryFunc : (q: Query) => Query) : MSSQLData
-    public join(tableName : string, primaryKey : string, foreignKey : string) : MSSQLData
-    public join(table : any, arg2 : any, arg3 : any = null, arg4 : any = null) : MSSQLData {
+    private addJoin(type: string, table : string | MSSQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null):void {
         this.joins.push({
-            type: "JOIN",
-            func: (table : any, arg2 : any, arg3 : any = null, arg4 : any = null) => {
+            func: (type: string, table : string | MSSQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null) => {
                 var tableName = "";
-                var primaryKey;
-                var foreignKey;
+                var primaryKey: string | ((q:Query)=>Query);
+                var foreignKey: string;
                 var params = [];
                 var paramNames = [];
                 if(typeof table == "string") {
                     tableName = table;
                     primaryKey = arg2;
-                    foreignKey = arg3;
+                    foreignKey = <string>arg3;
                 } else {
                     table.increaseParamNum(this.getParamNum()-1);
                     let startParamNum = table.getParamNum();
@@ -785,7 +780,7 @@ export class MSSQLData implements iSQL {
                     query.on(primaryKey,"=",foreignKey);                    
                 }
                 return {
-                    type: "join",
+                    type: type,
                     table: tableName,
                     query: query,
                     params: params,
@@ -793,13 +788,21 @@ export class MSSQLData implements iSQL {
                 };
             },
             args: [
+                type,
                 table, 
                 arg2, 
                 arg3, 
                 arg4
             ]
         });
-        
+    }
+
+    public join(tableName : MSSQLData, tableAlias : string, queryFunc : (q: Query) => Query) : MSSQLData
+    public join(tableName : MSSQLData, tableAlias : string, primaryKey : string, foreignKey : string) : MSSQLData
+    public join(tableName : string, queryFunc : (q: Query) => Query) : MSSQLData
+    public join(tableName : string, primaryKey : string, foreignKey : string) : MSSQLData
+    public join(table : string | MSSQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null) : MSSQLData {       
+        this.addJoin("JOIN", table, arg2, arg3, arg4)
         return this;
     }
     
@@ -807,54 +810,8 @@ export class MSSQLData implements iSQL {
     public leftJoin(tableName : MSSQLData, tableAlias : string, primaryKey : string, foreignKey : string) : MSSQLData
     public leftJoin(tableName : string, queryFunc : (q: Query) => Query) : MSSQLData
     public leftJoin(tableName : string, primaryKey : string, foreignKey : string) : MSSQLData
-    public leftJoin(table : any, arg2 : any, arg3 : any = null, arg4 : any = null) : MSSQLData {
-        this.joins.push({
-            type: "LEFT JOIN",
-            func: (table : any, arg2 : any, arg3 : any = null, arg4 : any = null) =>{
-                var tableName = "";
-                var primaryKey;
-                var foreignKey;
-                var params = [];
-                var paramNames = [];
-                if(typeof table == "string") {
-                    tableName = table;
-                    primaryKey = arg2;
-                    foreignKey = arg3;
-                } else {
-                    table.increaseParamNum(this.getParamNum()-1);
-                    let startParamNum = table.getParamNum();
-                    tableName = "(" + table.generateSelect() + ") " + arg2 + " ";
-                    let paramDif = table.getParamNum() - startParamNum;
-                    this.increaseParamNum(paramDif);
-                    primaryKey = arg3;
-                    foreignKey = arg4;
-                    params = table.getParams();
-                    paramNames = table.getParamNames();
-                }
-                var query = new Query(true);
-                query.increaseParamNum(1);
-                if(typeof primaryKey != "string") {
-                    primaryKey(query);
-                } else {
-                    query.on(primaryKey,"=",foreignKey,false);
-                    
-                }
-                return {
-                    type: "left join",
-                    table: tableName,
-                    query: query,
-                    params: params,
-                    paramNames: paramNames
-                };
-            },
-            args: [
-                table, 
-                arg2, 
-                arg3, 
-                arg4
-            ]
-        })
-        
+    public leftJoin(table : string | MSSQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null) : MSSQLData {
+        this.addJoin("LEFT JOIN", table, arg2, arg3, arg4)        
         return this;
     }
 

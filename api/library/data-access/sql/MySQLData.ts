@@ -680,19 +680,15 @@ export class MySQLData implements iSQL {
         return this;
     }
 
-    public join(tableName : MySQLData, tableAlias : string, queryFunc : (q: Query) => Query) : MySQLData
-    public join(tableName : MySQLData, tableAlias : string, primaryKey : string, foreignKey : string) : MySQLData
-    public join(tableName : string, queryFunc : (q: Query) => Query) : MySQLData
-    public join(tableName : string, primaryKey : string, foreignKey : string) : MySQLData
-    public join(table : any, arg2 : any, arg3 : any = null, arg4 : any = null) : MySQLData {
+    private addJoin(type: string, table : string | MySQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null):void {
         var tableName = "";
-        var primaryKey;
-        var foreignKey;
+        var primaryKey: string | ((q:Query)=>Query);
+        var foreignKey: string;
         var params = [];
         if(typeof table == "string") {
             tableName = table;
             primaryKey = arg2;
-            foreignKey = arg3;
+            foreignKey = <string>arg3;
         } else {
             tableName = "(" + table.generateSelect() + ") " + arg2 + " ";
             primaryKey = arg3;
@@ -707,11 +703,19 @@ export class MySQLData implements iSQL {
             
         }
         this.joins.push({
-            type: "JOIN",
+            type: type,
             table: tableName,
             query: query,
             params: params
         });
+    }
+
+    public join(tableName : MySQLData, tableAlias : string, queryFunc : (q: Query) => Query) : MySQLData
+    public join(tableName : MySQLData, tableAlias : string, primaryKey : string, foreignKey : string) : MySQLData
+    public join(tableName : string, queryFunc : (q: Query) => Query) : MySQLData
+    public join(tableName : string, primaryKey : string, foreignKey : string) : MySQLData
+    public join(table : string | MySQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null) : MySQLData {
+        this.addJoin("JOIN", table, arg2, arg3, arg4);
         return this;
     }
     
@@ -719,34 +723,8 @@ export class MySQLData implements iSQL {
     public leftJoin(tableName : MySQLData, tableAlias : string, primaryKey : string, foreignKey : string) : MySQLData
     public leftJoin(tableName : string, queryFunc : (q: Query) => Query) : MySQLData
     public leftJoin(tableName : string, primaryKey : string, foreignKey : string) : MySQLData
-    public leftJoin(table : any, arg2 : any, arg3 : any = null, arg4 : any = null) : MySQLData {
-        var tableName = "";
-        var primaryKey;
-        var foreignKey;
-        var params = [];
-        if(typeof table == "string") {
-            tableName = table;
-            primaryKey = arg2;
-            foreignKey = arg3;
-        } else {
-            tableName = "(" + table.generateSelect() + ") " + arg2 + " ";
-            primaryKey = arg3;
-            foreignKey = arg4;
-            params = table.getParams();
-        }
-        var query = new Query(false);
-        if(typeof primaryKey != "string") {
-            primaryKey(query);
-        } else {
-            query.on(primaryKey,"=",foreignKey,false);
-            
-        }
-        this.joins.push({
-            type: "LEFT JOIN",
-            table: tableName,
-            query: query,
-            params: params
-        });
+    public leftJoin(table : string | MySQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null) : MySQLData {
+        this.addJoin("LEFT JOIN", table, arg2, arg3, arg4);
         return this;
     }
 
