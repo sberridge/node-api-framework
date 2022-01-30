@@ -188,7 +188,7 @@ export class PostgresData implements iSQL {
     
     public table(tableName : PostgresData, tableAlias : string) : PostgresData
     public table(tableName : string) : PostgresData
-    public table(tableName : any, tableAlias? : string) : PostgresData {
+    public table(tableName : string | PostgresData, tableAlias? : string) : PostgresData {
         if(typeof tableName == "object") {
             this.subStatement = tableName
             this.tableAlias = this.checkReserved(tableAlias);
@@ -219,10 +219,7 @@ export class PostgresData implements iSQL {
     }
 
     public cols(selectColumns : string[]) : PostgresData {
-        var self = this;
-        this.selectColumns = selectColumns.map(function(col) {
-            return self.checkReserved(col);
-        });            
+        this.selectColumns = selectColumns.map(this.checkReserved);            
         return this;
     }
 
@@ -284,9 +281,6 @@ export class PostgresData implements iSQL {
     }
     
     public where(field : string, comparator : comparison, value : any, escape : boolean = true) : PostgresData {
-        if(!escape) {
-            value = this.checkReserved(value);
-        }
         this.query.where(this.checkReserved(field),comparator,value,escape);
         return this;
     }
@@ -303,23 +297,18 @@ export class PostgresData implements iSQL {
     
     public whereIn(field : string, subQuery : PostgresData) : PostgresData
     public whereIn(field : string, values : any[], escape : boolean) : PostgresData
-    public whereIn(field : string, values : any, escape : boolean = true) : PostgresData {
-        var self = this;
-        if(Array.isArray(values) && !escape) {
-            values = values.map(function(val) {
-                return self.checkReserved(val);
-            });
-        }
-        this.query.whereIn(field,values,escape);
+    public whereIn(field : string, values : any[] | PostgresData, escape : boolean = true) : PostgresData {
+        if(Array.isArray(values)) {
+            this.query.whereIn(this.checkReserved(field),values,escape);
+        } else {
+            this.query.whereIn(this.checkReserved(field),values);
+        }        
         return this;
     }
 
     public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: WeightedCondition, escape : boolean) : PostgresData
     public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number, escape : boolean) : PostgresData
-    public weightedWhere(field : string, comparator : comparison, value : any, weight: any, nonMatchWeight:any, escape : boolean = true) : PostgresData {
-        if(!escape) {
-            value = this.checkReserved(value);
-        }
+    public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight:any, escape : boolean = true) : PostgresData {
         var weightedQuery = new Query(false);
         weightedQuery.where(this.checkReserved(field),comparator,value,escape);
         this.weightedConditions.push(new WeightedCondition(weightedQuery,weight,nonMatchWeight));
@@ -328,10 +317,7 @@ export class PostgresData implements iSQL {
     
     public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: WeightedCondition, escape : boolean) : WeightedCondition
     public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number, escape : boolean) : WeightedCondition
-    public subWeightedWhere(field : string, comparator : comparison, value : any, weight: any, nonMatchWeight:any, escape : boolean = true) : WeightedCondition {
-        if(!escape) {
-            value = this.checkReserved(value);
-        }
+    public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight:any, escape : boolean = true) : WeightedCondition {
         var weightedQuery = new Query(false);
         weightedQuery.where(this.checkReserved(field),comparator,value,escape);
         return new WeightedCondition(weightedQuery,weight,nonMatchWeight);
@@ -432,9 +418,8 @@ export class PostgresData implements iSQL {
     }
 
     public fetch(): Promise<SQLResult> {
-        var self = this;
-        return new Promise(function(resolve,reject) {
-            self.execute(self.generateSelect()).then(function(results) {
+        return new Promise((resolve,reject)=>{
+            this.execute(this.generateSelect()).then((results) => {
                 resolve(results);
             }).catch(err=>{
                 reject(err);
@@ -458,12 +443,11 @@ export class PostgresData implements iSQL {
     }
 
     public fetchModels(): Promise<ModelCollection> {
-        var self = this;
-        return new Promise(function(resolve,reject) {
-            self.execute(self.generateSelect()).then(function(results: SQLResult) {
+        return new Promise((resolve,reject)=>{
+            this.execute(this.generateSelect()).then((results: SQLResult)=>{
                 var modelCollection = new ModelCollection;
                 results.rows.forEach((result)=>{
-                    let model:BaseModel = self.resultToModel(result);
+                    let model:BaseModel = this.resultToModel(result);
                     modelCollection.add(model);
                 });
                 resolve(modelCollection);
@@ -474,12 +458,11 @@ export class PostgresData implements iSQL {
     }
 
     public streamModels(num: number, callback: (models:ModelCollection)=>Promise<void>): Promise<void> {
-        var self = this;
         return new Promise((resolve,reject)=>{
-            self.stream(num, async function(results) {
+            this.stream(num, async (results) => {
                 var modelCollection = new ModelCollection;
                 results.forEach((result)=>{
-                    var model = self.resultToModel(result);
+                    var model = this.resultToModel(result);
                     modelCollection.add(model);
                 });
                 await callback(modelCollection);
@@ -493,11 +476,10 @@ export class PostgresData implements iSQL {
     }
 
     public stream(num : number, callback : (results:any[])=>Promise<void>): Promise<void> {
-        var self = this;
-        return new Promise(function(resolve,reject) {
-            self.connect().connect(function(err,connection) {
+        return new Promise((resolve,reject)=>{
+            this.connect().connect((err,connection) => {
                 var results = [];
-                const query = new QueryStream(self.generateSelect(), self.params);
+                const query = new QueryStream(this.generateSelect(), this.params);
                 const stream = connection.query(query);
                 stream.on("data",async (data)=>{
                     results.push(data);
@@ -570,17 +552,12 @@ export class PostgresData implements iSQL {
     } 
 
     public generateInsert() : string {
-        var self = this;
         var query = "INSERT INTO " + this.tableName + " (";
         var columns = [];
         if(typeof this.multiInsertValues == "undefined") {
-            columns = Object.keys(this.insertValues).map(function(val) {
-                return self.checkReserved(val);
-            });
+            columns = Object.keys(this.insertValues).map(this.checkReserved);
         } else {
-            columns = Object.keys(this.multiInsertValues[0]).map(function(val) {
-                return self.checkReserved(val);
-            });
+            columns = Object.keys(this.multiInsertValues[0]).map(this.checkReserved);
         }
 
         query += columns.join(",") + ") VALUES ";
@@ -624,9 +601,8 @@ export class PostgresData implements iSQL {
         } else {
             throw "No update or insert parameters set";
         }
-        var self = this;
-        return new Promise(function(resolve,reject) {
-            self.execute(query).then(function(results) {
+        return new Promise((resolve,reject) => {
+            this.execute(query).then((results) => {
                 resolve(results);
             }).catch(err=>{
                 reject(err);
@@ -645,9 +621,8 @@ export class PostgresData implements iSQL {
 
     public delete(): Promise<SQLResult> {
         var query = this.generateDelete();
-        var self = this;
-        return new Promise(function(resolve,reject) {
-            self.execute(query).then(function(results) {
+        return new Promise((resolve,reject) => {
+            this.execute(query).then((results) => {
                 resolve(results);
             }).catch(err=>{
                 reject(err);
@@ -656,13 +631,12 @@ export class PostgresData implements iSQL {
     }
 
     public execute(query : string): Promise<SQLResult> {
-        var self = this;
         return new Promise((resolve,reject)=>{
-            self.connect().connect(async (err,connection)=>{
+            this.connect().connect(async (err,connection)=>{
                 if(err) {
                     reject(err);
                 } else {
-                    connection.query(query,self.params,(error,results)=>{
+                    connection.query(query,this.params,(error,results)=>{
                         let result = new SQLResult();
                         connection.release();
                         if(error !== null) {
@@ -770,8 +744,8 @@ export class PostgresData implements iSQL {
         var sql = new PostgresData(this.usedConfig);
         sql.table(this,"count_sql");
         sql.cols(["COUNT(*) num"]);
-        return new Promise(function(resolve,reject) {
-            sql.fetch().then(function(result) {
+        return new Promise((resolve,reject) => {
+            sql.fetch().then((result) => {
                 var num = result.rows[0]['num'];
                 resolve(num);
             }).catch(err=>{
@@ -781,11 +755,10 @@ export class PostgresData implements iSQL {
     }
 
     public paginate(perPage: number, page: number): Promise<pagination> {
-        var self = this;
         return new Promise((resolve,reject)=>{
-            self.count().then((num)=>{
-                self.limit(perPage);
-                self.offset(perPage*(page-1));
+            this.count().then((num)=>{
+                this.limit(perPage);
+                this.offset(perPage*(page-1));
                 resolve({
                     total_rows: num
                 })

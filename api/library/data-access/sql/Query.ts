@@ -103,10 +103,10 @@ export class Query {
 
     public whereIn(field : string, subQuery : iSQL) : Query
     public whereIn(field : string, values : any[], escape : boolean) : Query
-    public whereIn(field : string, values : any, escape : boolean = true) : Query {
+    public whereIn(field : string, values : iSQL | any[], escape : boolean = true) : Query {
         this.wheres.push({
             type: "where",
-            func: (field:string, values: any, escape:boolean=true)=>{
+            func: (field:string, values: iSQL | any[], escape:boolean=true)=>{
                 var valueString : string;
                 var params = [];
                 var paramPrefixes = [];

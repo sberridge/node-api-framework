@@ -189,7 +189,7 @@ export class MSSQLData implements iSQL {
     
     public table(tableName : MSSQLData, tableAlias : string) : MSSQLData
     public table(tableName : string) : MSSQLData
-    public table(tableName : any, tableAlias? : string) : MSSQLData {
+    public table(tableName : MSSQLData | string, tableAlias? : string) : MSSQLData {
         if(typeof tableName == "object") {
             this.subStatement = tableName
             this.tableAlias = this.checkReserved(tableAlias);
@@ -260,7 +260,7 @@ export class MSSQLData implements iSQL {
         return this;
     }
 
-    public checkReserved(value : any) : any {
+    public checkReserved(value : string) : string {
         var reservedWords = [
             'select',
             'insert',
@@ -288,9 +288,6 @@ export class MSSQLData implements iSQL {
     }
     
     public where(field : string, comparator : comparison, value : any, escape : boolean = true) : MSSQLData {
-        if(!escape) {
-            value = this.checkReserved(value);
-        }
         this.query.where(this.checkReserved(field),comparator,value,escape);
         return this;
     }
@@ -307,23 +304,18 @@ export class MSSQLData implements iSQL {
     
     public whereIn(field : string, subQuery : MSSQLData) : MSSQLData
     public whereIn(field : string, values : any[], escape : boolean) : MSSQLData
-    public whereIn(field : string, values : any, escape : boolean = true) : MSSQLData {
-        var self = this;
-        if(Array.isArray(values) && !escape) {
-            values = values.map(function(val) {
-                return self.checkReserved(val);
-            });
+    public whereIn(field : string, values : any[] | MSSQLData, escape : boolean = true) : MSSQLData {
+        if(Array.isArray(values)) {
+            this.query.whereIn(this.checkReserved(field),values,escape);
+        } else {
+            this.query.whereIn(this.checkReserved(field),values);
         }
-        this.query.whereIn(field,values,escape);
         return this;
     }
 
     public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: WeightedCondition, escape : boolean) : MSSQLData
     public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number, escape : boolean) : MSSQLData
     public weightedWhere(field : string, comparator : comparison, value : any, weight: any, nonMatchWeight:any, escape : boolean = true) : MSSQLData {
-        if(!escape) {
-            value = this.checkReserved(value);
-        }
         var weightedQuery = new Query(true);
         weightedQuery.setPrefix("weight" + weight.toString());
         weightedQuery.where(this.checkReserved(field),comparator,value,escape);
@@ -334,9 +326,6 @@ export class MSSQLData implements iSQL {
     public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: WeightedCondition, escape : boolean) : WeightedCondition
     public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number, escape : boolean) : WeightedCondition
     public subWeightedWhere(field : string, comparator : comparison, value : any, weight: any, nonMatchWeight:any, escape : boolean = true) : WeightedCondition {
-        if(!escape) {
-            value = this.checkReserved(value);
-        }
         var weightedQuery = new Query(true);
         weightedQuery.setPrefix("weight" + weight.toString());
         weightedQuery.where(this.checkReserved(field),comparator,value,escape);
@@ -445,9 +434,8 @@ export class MSSQLData implements iSQL {
     }
 
     public fetch(): Promise<SQLResult> {
-        var self = this;
-        return new Promise(function(resolve,reject) {
-            self.execute(self.generateSelect()).then(function(results) {
+        return new Promise((resolve,reject) => {
+            this.execute(this.generateSelect()).then((results) => {
                 resolve(results);
             }).catch(err=>{
                 reject(err);
@@ -471,12 +459,11 @@ export class MSSQLData implements iSQL {
     }
 
     public fetchModels(): Promise<ModelCollection> {
-        var self = this;
-        return new Promise(function(resolve,reject) {
-            self.execute(self.generateSelect()).then(function(results) {
+        return new Promise((resolve,reject) => {
+            this.execute(this.generateSelect()).then((results) => {
                 var modelCollection = new ModelCollection;
                 results.rows.forEach((result)=>{
-                    let model = self.resultToModel(result);
+                    let model = this.resultToModel(result);
                     modelCollection.add(model);
                 });
                 resolve(modelCollection);
@@ -487,12 +474,11 @@ export class MSSQLData implements iSQL {
     }
 
     public streamModels(num: number, callback: (models:ModelCollection)=>Promise<void>): Promise<void> {
-        var self = this;
         return new Promise((resolve,reject)=>{
-            self.stream(num, async function(results) {
+            this.stream(num, async (results) => {
                 var modelCollection = new ModelCollection;
                 results.forEach((result)=>{
-                    var model = new self.modelFunc();
+                    var model = new this.modelFunc();
                     model.loadData(result);
                     modelCollection.add(model);
                 });
@@ -507,15 +493,14 @@ export class MSSQLData implements iSQL {
     }
 
     public stream(num : number, callback : (results:any[])=>Promise<void>): Promise<void> {
-        var self = this;
-        return new Promise(async (resolve,reject)=> {
+        return new Promise(async (resolve,reject) => {
             await this.connect();
 
             var results = [];
 
             var request = this.pool.request();
             request.stream = true;
-            var query = self.generateSelect();
+            var query = this.generateSelect();
             var data = {};
             this.params.forEach((val,i)=>{
                 switch(typeof val) {
@@ -560,7 +545,7 @@ export class MSSQLData implements iSQL {
 
     public insert(columnValues : object[], escape : boolean) : MSSQLData
     public insert(columnValues : object, escape : boolean) : MSSQLData
-    public insert(columnValues : any, escape : boolean = true) : MSSQLData {            
+    public insert(columnValues : object[] | object, escape : boolean = true) : MSSQLData {            
         var params = [];
         var paramNames = [];
         if(Array.isArray(columnValues)) {
@@ -613,17 +598,12 @@ export class MSSQLData implements iSQL {
     } 
 
     public generateInsert() : string {
-        var self = this;
         var query = "INSERT INTO " + this.tableName + " (";
         var columns = [];
         if(typeof this.multiInsertValues == "undefined") {
-            columns = Object.keys(this.insertValues).map(function(val) {
-                return self.checkReserved(val);
-            });
+            columns = Object.keys(this.insertValues).map(this.checkReserved);
         } else {
-            columns = Object.keys(this.multiInsertValues[0]).map(function(val) {
-                return self.checkReserved(val);
-            });
+            columns = Object.keys(this.multiInsertValues[0]).map(this.checkReserved);
         }
         query += columns.join(",") + ") VALUES";
 
@@ -664,9 +644,8 @@ export class MSSQLData implements iSQL {
         } else {
             throw "No update or insert parameters set";
         }
-        var self = this;
         return new Promise((resolve,reject)=> {
-            self.execute(query).then((results)=> {
+            this.execute(query).then((results)=> {
                 resolve(results);
             }).catch(err=>{
                 reject(err);
@@ -686,9 +665,8 @@ export class MSSQLData implements iSQL {
 
     public delete(): Promise<SQLResult> {
         var query = this.generateDelete();
-        var self = this;
-        return new Promise(function(resolve,reject) {
-            self.execute(query).then(function(results) {
+        return new Promise((resolve,reject) => {
+            this.execute(query).then((results) => {
                 resolve(results);
             }).catch(err=>{
                 reject(err);
@@ -697,7 +675,6 @@ export class MSSQLData implements iSQL {
     }
 
     public execute(query : string): Promise<SQLResult> {
-        var self = this;
         return new Promise(async (resolve,reject)=>{
             await this.connect();
             var request = this.pool.request();
@@ -819,9 +796,9 @@ export class MSSQLData implements iSQL {
         var sql = new MSSQLData(this.usedConfig);
         sql.table(this,"count_sql");
         sql.cols(["COUNT(*) num"]);
-        return new Promise(function(resolve,reject) {
-            sql.fetch().then(function(result) {
-                var num = result[0]['num'];
+        return new Promise((resolve,reject) => {
+            sql.fetch().then((result) => {
+                var num = result.rows[0]['num'];
                 resolve(num);
             }).catch(err=>{
                 reject(err);
@@ -830,11 +807,10 @@ export class MSSQLData implements iSQL {
     }
 
     public paginate(perPage: number, page: number): Promise<pagination> {
-        var self = this;
         return new Promise((resolve,reject)=>{
-            self.count().then((num)=>{
-                self.limit(perPage);
-                self.offset(perPage*(page-1));
+            this.count().then((num)=>{
+                this.limit(perPage);
+                this.offset(perPage*(page-1));
                 resolve({
                     total_rows: num
                 })

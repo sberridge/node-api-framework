@@ -10,7 +10,7 @@ export class WeightedCondition {
 
     constructor(query:Query,weight:number,subCondition:WeightedCondition)
     constructor(query:Query,weight:number,nonMatchWeight:number)
-    constructor(query:Query,weight:number,NonMatch:any) {
+    constructor(query:Query,weight:number,NonMatch:WeightedCondition|number) {
         this.query = query;
         this.weight = weight;
         if(typeof NonMatch == "number") {
