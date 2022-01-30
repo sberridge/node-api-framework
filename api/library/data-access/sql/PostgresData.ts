@@ -457,7 +457,7 @@ export class PostgresData implements iSQL {
         }); 
     }
 
-    public streamModels(num: number, callback: (models:ModelCollection)=>Promise<void>): Promise<void> {
+    public streamModels(num: number, callback: (models:ModelCollection)=>Promise<boolean>): Promise<void> {
         return new Promise((resolve,reject)=>{
             this.stream(num, async (results) => {
                 var modelCollection = new ModelCollection;
@@ -465,7 +465,7 @@ export class PostgresData implements iSQL {
                     var model = this.resultToModel(result);
                     modelCollection.add(model);
                 });
-                await callback(modelCollection);
+                return await callback(modelCollection);
             }).then(()=>{
                 resolve();
             }).catch(err=>{
@@ -475,7 +475,7 @@ export class PostgresData implements iSQL {
         
     }
 
-    public stream(num : number, callback : (results:any[])=>Promise<void>): Promise<void> {
+    public stream(num : number, callback : (results:any[])=>Promise<boolean>): Promise<void> {
         return new Promise((resolve,reject)=>{
             this.connect().connect((err,connection) => {
                 var results = [];
@@ -485,12 +485,20 @@ export class PostgresData implements iSQL {
                     results.push(data);
                     if(results.length >= num) {
                         stream.pause();
-                        await callback(results);
+                        const shouldContinue = await callback(results);
                         results = [];
-                        stream.resume();
+                        if(!shouldContinue) {
+                            stream.destroy();
+                            stream.cursor.close();
+                            connection.release();
+                            resolve();
+                        } else {
+                            stream.resume();
+                        }                        
                     }
                 })
                 .on("end",async ()=>{
+                    console.log('fin');
                     if(results.length > 0) {
                         await callback(results);
                     }

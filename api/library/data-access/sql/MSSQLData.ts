@@ -473,7 +473,7 @@ export class MSSQLData implements iSQL {
         }); 
     }
 
-    public streamModels(num: number, callback: (models:ModelCollection)=>Promise<void>): Promise<void> {
+    public streamModels(num: number, callback: (models:ModelCollection)=>Promise<boolean>): Promise<void> {
         return new Promise((resolve,reject)=>{
             this.stream(num, async (results) => {
                 var modelCollection = new ModelCollection;
@@ -482,7 +482,7 @@ export class MSSQLData implements iSQL {
                     model.loadData(result);
                     modelCollection.add(model);
                 });
-                await callback(modelCollection);
+                return await callback(modelCollection);
             }).then(()=>{
                 resolve();
             }).catch(err=>{
@@ -492,7 +492,7 @@ export class MSSQLData implements iSQL {
         
     }
 
-    public stream(num : number, callback : (results:any[])=>Promise<void>): Promise<void> {
+    public stream(num : number, callback : (results:any[])=>Promise<boolean>): Promise<void> {
         return new Promise(async (resolve,reject) => {
             await this.connect();
 
@@ -524,9 +524,13 @@ export class MSSQLData implements iSQL {
                 results.push(row);
                 if(results.length >= num) {
                     request.pause();
-                    await callback(results);
+                    const shouldContinue = await callback(results);
                     results = [];
-                    request.resume();
+                    if(!shouldContinue) {
+                        request.cancel();
+                    } else {
+                        request.resume();
+                    }                    
                 }
             });
             request.on('error', err => {

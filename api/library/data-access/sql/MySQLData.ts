@@ -444,7 +444,7 @@ export class MySQLData implements iSQL {
         }); 
     }
 
-    public streamModels(num: number, callback: (models:ModelCollection)=>Promise<void>): Promise<void> {
+    public streamModels(num: number, callback: (models:ModelCollection)=>Promise<boolean>): Promise<void> {
         return new Promise((resolve,reject)=>{
             this.stream(num, async (results) => {
                 var modelCollection = new ModelCollection;
@@ -452,7 +452,7 @@ export class MySQLData implements iSQL {
                     var model = this.resultToModel(result);
                     modelCollection.add(model);
                 });
-                await callback(modelCollection);
+                return await callback(modelCollection);
             }).then(()=>{
                 resolve();
             }).catch(err=>{
@@ -462,7 +462,7 @@ export class MySQLData implements iSQL {
         
     }
 
-    public stream(num : number, callback : (results:any[])=>Promise<void>): Promise<void> {
+    public stream(num : number, callback : (results:any[])=>Promise<boolean>): Promise<void> {
         return new Promise((resolve,reject) => {
             this.connect().getConnection((err,connection) => {
                 var results = [];
@@ -477,9 +477,14 @@ export class MySQLData implements iSQL {
                         results.push(result);
                         if(results.length >= num) {
                             connection.pause();
-                            await callback(results);
+                            const shouldContinue = await callback(results);
                             results = [];
-                            connection.resume();
+                            if(!shouldContinue) {
+                                connection.destroy();
+                                resolve();
+                            } else {
+                                connection.resume();
+                            }
                         }
                     })
                     .on('end',async () => {

@@ -69,8 +69,8 @@ import { comparison, pagination } from './SQLTypes';
         fetch() : Promise<SQLResult>
         fetchModels() : Promise<ModelCollection>
         
-        stream(num : number, callback : (results:any[])=>Promise<void>): Promise<void>
-        streamModels(num: number, callback: (models:ModelCollection)=>Promise<void>): Promise<void>
+        stream(num : number, callback : (results:any[])=>Promise<boolean>): Promise<void>
+        streamModels(num: number, callback: (models:ModelCollection)=>Promise<boolean>): Promise<void>
 
         generateInsert():string
         insert(columnValues : object[], escape : boolean) : iSQL

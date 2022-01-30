@@ -223,7 +223,7 @@ describe('MySQLTests',function(){
                     await db.stream(100,(records)=>{
                         return new Promise((res,rej)=>{
                             timesLooped++;
-                            res();
+                            res(true);
                         });                        
                     });
                     expect(timesLooped).to.be.equal(10);   
