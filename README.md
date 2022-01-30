@@ -710,8 +710,8 @@ await dataConnection.stream(100, (results)=>{
     return new Promise((resolve, reject)=>{
 
         //when finished with the result set, resolve the promise
-
-        resolve();
+        //resolve with true to continue the stream, or false to cancel
+        resolve(true);
     })
 });
 
@@ -795,7 +795,9 @@ await (new User).all()
             for(let user of modelCollection) {
                 //do something with user
             }
-            resolve();
+
+            //resolve with true to continue the stream, or false to cancel
+            resolve(true);
         });
     });
 ```
