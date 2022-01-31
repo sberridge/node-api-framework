@@ -1,4 +1,3 @@
-var fs = require('fs');
 import {MySQLData} from './sql/MySQLData';
 import {MSSQLData} from './sql/MSSQLData';
 import { iSQL } from './sql/interface/SQLInterface';
@@ -7,13 +6,11 @@ import { ConnectionConfig } from './sql/interface/SQLConnectionConfig';
 import { PostgresData } from './sql/PostgresData';
 
 export class DataAccessFactory {
-    private config;
+    private config = Config.get().databases.sql;
     private ready:boolean = false;
     private readyFuncs = [];
     constructor() {
         this.ready = true;
-        let sqlConfig = Config.get().databases.sql;
-        this.config = sqlConfig;
         this.readyFuncs.forEach((func)=>{
             func();
         });
