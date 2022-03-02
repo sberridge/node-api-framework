@@ -517,9 +517,6 @@ export class MSSQLData implements iSQL {
                 data[this.paramNames[i]] = val;           
             });
             request.query(query);
-            request.on('recordset',columns=>{
-
-            });
             request.on('row',async(row)=>{
                 results.push(row);
                 if(results.length >= num) {
@@ -547,39 +544,51 @@ export class MSSQLData implements iSQL {
         
     }
 
-    public insert(columnValues : object[], escape : boolean) : MSSQLData
-    public insert(columnValues : object, escape : boolean) : MSSQLData
-    public insert(columnValues : object[] | object, escape : boolean = true) : MSSQLData {            
+    private multiInsert(columnValues: object[], escape: boolean) {
         var params = [];
         var paramNames = [];
-        if(Array.isArray(columnValues)) {
-            var multiInsertValues = [];
-            columnValues.forEach((insertRecord:object)=>{
-                if(escape) {
-                    for(var key in insertRecord) {
-                        var num = params.push(insertRecord[key]);
-                        var name = this.paramPrefix + num.toString();
-                        insertRecord[key] = "@" + name;
-                        paramNames.push(name);
-                    }
-                }
-                multiInsertValues.push(insertRecord);
-            });
-            this.multiInsertValues = multiInsertValues;
-            
-        } else {
+        var multiInsertValues = [];
+        columnValues.forEach((insertRecord:object)=>{
             if(escape) {
-                for(var key in columnValues) {
-                    var num = params.push(columnValues[key]);
+                for(var key in insertRecord) {
+                    var num = params.push(insertRecord[key]);
                     var name = this.paramPrefix + num.toString();
-                    columnValues[key] = "@" + name;
+                    insertRecord[key] = "@" + name;
                     paramNames.push(name);
                 }
             }
-            this.insertValues = columnValues;
-        }
+            multiInsertValues.push(insertRecord);
+        });
+        this.multiInsertValues = multiInsertValues;
         this.params = params;
         this.paramNames = paramNames;
+    }
+
+    private singleInsert(columnValues: object, escape: boolean) {
+        var params = [];
+        var paramNames = [];
+        if(escape) {
+            for(var key in columnValues) {
+                var num = params.push(columnValues[key]);
+                var name = this.paramPrefix + num.toString();
+                columnValues[key] = "@" + name;
+                paramNames.push(name);
+            }
+        }
+        this.insertValues = columnValues;
+        this.params = params;
+        this.paramNames = paramNames;
+    }
+
+    public insert(columnValues : object[], escape : boolean) : MSSQLData
+    public insert(columnValues : object, escape : boolean) : MSSQLData
+    public insert(columnValues : object[] | object, escape : boolean = true) : MSSQLData {            
+        
+        if(Array.isArray(columnValues)) {
+            this.multiInsert(columnValues, escape);            
+        } else {
+            this.singleInsert(columnValues, escape);            
+        }
         
         return this;
     }
@@ -599,27 +608,33 @@ export class MSSQLData implements iSQL {
         this.paramNames = paramNames;
         this.updateValues = columnValues;
         return this;
-    } 
+    }
+
+    private generateMultiInsert() {
+        var columns = Object.keys(this.multiInsertValues[0]).map(this.checkReserved);
+        var insert = columns.join(",") + ") VALUES";
+        insert += this.multiInsertValues.map((insertRow:object)=>{
+            return "(" + Object.values(insertRow).join(",") + ")";
+        }).join(',');
+        return insert;
+    }
+
+    private generateSingleInsert() {
+        var columns = Object.keys(this.insertValues).map(this.checkReserved);
+        var insert = columns.join(",") + ") VALUES";
+        insert +=  "(" + Object.values(this.insertValues).join(",") + "); SELECT IDENT_CURRENT('" + this.tableName + "') AS last_insert_id;";
+        return insert
+    }
 
     public generateInsert() : string {
         var query = "INSERT INTO " + this.tableName + " (";
-        var columns = [];
-        if(typeof this.multiInsertValues == "undefined") {
-            columns = Object.keys(this.insertValues).map(this.checkReserved);
-        } else {
-            columns = Object.keys(this.multiInsertValues[0]).map(this.checkReserved);
-        }
-        query += columns.join(",") + ") VALUES";
 
         if(typeof this.multiInsertValues == "undefined") {
-            query += "(" + Object.values(this.insertValues).join(",") + "); SELECT IDENT_CURRENT('" + this.tableName + "') AS last_insert_id;";
+            query += this.generateSingleInsert();
         } else {
-            query += this.multiInsertValues.map((insertRow:object)=>{
-                return "(" + Object.values(insertRow).join(",") + ")";
-            }).join(',');    
+            query += this.generateMultiInsert();
         }
 
-        
         return query;
     }
 

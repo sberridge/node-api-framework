@@ -15,9 +15,8 @@ export class DataAccessFactory {
             func();
         });
     }
-    public create(configKey : string):iSQL {
-        let connectionConfig:ConnectionConfig = {};
-        
+    private getConnectionConfig(configKey: string): ConnectionConfig {
+        let connectionConfig:ConnectionConfig = {};        
         var config = this.config[configKey];
         [
             "type",
@@ -33,7 +32,11 @@ export class DataAccessFactory {
             }
         });
         connectionConfig.name = configKey;
-        switch(config.type) {
+        return connectionConfig
+    }
+    public create(configKey : string):iSQL {
+        const connectionConfig = this.getConnectionConfig(configKey);
+        switch(connectionConfig.type) {
             case "MySQL":
                 return new MySQLData(connectionConfig);
             case "MSSQL":

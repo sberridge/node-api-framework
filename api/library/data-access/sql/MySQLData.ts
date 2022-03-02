@@ -470,9 +470,6 @@ export class MySQLData implements iSQL {
                     .on('error',function(err) {
                         reject(err);
                     })
-                    .on('fields',function(fields) {
-
-                    })
                     .on('result',async (result) => {
                         results.push(result);
                         if(results.length >= num) {
@@ -499,32 +496,40 @@ export class MySQLData implements iSQL {
         });
         
     }
+    private multiInsert(columnValues: object[], escape: boolean) {
+        var params = [];
+        var multiInsertValues = [];
+        columnValues.forEach((insertRecord:object)=>{
+            if(escape) {
+                for(var key in insertRecord) {
+                    params.push(insertRecord[key]);
+                    insertRecord[key] = "?";
+                }
+            }
+            multiInsertValues.push(insertRecord);
+        });
+        this.multiInsertValues = multiInsertValues;
+        this.params = params;
+    }
+    private singleInsert(columnValues:object, escape: boolean) {
+        var params = [];
+        if(escape) {
+            for(var key in columnValues) {
+                params.push(columnValues[key]);
+                columnValues[key] = "?";
+            }
+        }
+        this.params = params;
+        this.insertValues = columnValues;
+    }
     public insert(columnValues : object[], escape : boolean) : MySQLData
     public insert(columnValues : object, escape : boolean) : MySQLData
     public insert(columnValues : object[] | object, escape : boolean = true) : MySQLData {            
-        var params = [];
+        
         if(Array.isArray(columnValues)) {
-            var multiInsertValues = [];
-            columnValues.forEach((insertRecord:object)=>{
-                if(escape) {
-                    for(var key in insertRecord) {
-                        params.push(insertRecord[key]);
-                        insertRecord[key] = "?";
-                    }
-                }
-                multiInsertValues.push(insertRecord);
-            });
-            this.multiInsertValues = multiInsertValues;
-            this.params = params;
+            this.multiInsert(columnValues, escape);
         } else {
-            if(escape) {
-                for(var key in columnValues) {
-                    params.push(columnValues[key]);
-                    columnValues[key] = "?";
-                }
-            }
-            this.params = params;
-            this.insertValues = columnValues;
+           this.singleInsert(columnValues, escape);
         }
         
         return this;
@@ -543,23 +548,28 @@ export class MySQLData implements iSQL {
         return this;
     } 
 
+    private generateMultiInsert(): string {
+        var columns = Object.keys(this.multiInsertValues[0]).map(this.checkReserved);
+        var insert = columns.join(",") + ") VALUES ";
+        insert += this.multiInsertValues.map((insertRow:object)=>{
+            return "(" + Object.values(insertRow).join(",") + ")";
+        }).join(',');
+        return insert;
+    }
+
+    private generateSingleInsert(): string {
+        var columns = Object.keys(this.insertValues).map(this.checkReserved);
+        var insert = columns.join(",") + ") VALUES ";
+        insert += "(" + Object.values(this.insertValues).join(",") + ")";
+        return insert;
+    }
+
     public generateInsert() : string {
         var query = "INSERT INTO " + this.tableName + " (";
-        var columns = [];
         if(typeof this.multiInsertValues == "undefined") {
-            columns = Object.keys(this.insertValues).map(this.checkReserved);
+            query += this.generateSingleInsert();
         } else {
-            columns = Object.keys(this.multiInsertValues[0]).map(this.checkReserved);
-        }
-
-        query += columns.join(",") + ") VALUES ";
-
-        if(typeof this.multiInsertValues == "undefined") {
-            query += "(" + Object.values(this.insertValues).join(",") + ")";
-        } else {
-            query += this.multiInsertValues.map((insertRow:object)=>{
-                return "(" + Object.values(insertRow).join(",") + ")";
-            }).join(',');            
+            query += this.generateMultiInsert();
         }
         return query;
     }
