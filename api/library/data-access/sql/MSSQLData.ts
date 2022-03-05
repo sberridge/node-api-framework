@@ -317,7 +317,7 @@ export class MSSQLData implements iSQL {
     public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number, escape : boolean) : MSSQLData
     public weightedWhere(field : string, comparator : comparison, value : any, weight: any, nonMatchWeight:any, escape : boolean = true) : MSSQLData {
         var weightedQuery = new Query(true);
-        weightedQuery.setPrefix("weight" + weight.toString());
+        weightedQuery.increaseParamNum(1);
         weightedQuery.where(this.checkReserved(field),comparator,value,escape);
         this.weightedConditions.push(new WeightedCondition(weightedQuery,weight,nonMatchWeight));
         return this;
@@ -327,7 +327,7 @@ export class MSSQLData implements iSQL {
     public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number, escape : boolean) : WeightedCondition
     public subWeightedWhere(field : string, comparator : comparison, value : any, weight: any, nonMatchWeight:any, escape : boolean = true) : WeightedCondition {
         var weightedQuery = new Query(true);
-        weightedQuery.setPrefix("weight" + weight.toString());
+        weightedQuery.increaseParamNum(1);
         weightedQuery.where(this.checkReserved(field),comparator,value,escape);
         return new WeightedCondition(weightedQuery,weight,nonMatchWeight);
     }
@@ -363,7 +363,12 @@ export class MSSQLData implements iSQL {
 
         if(this.weightedConditions.length > 0) {
             var weightedConditionQueries = this.weightedConditions.map((condition:WeightedCondition)=>{
-                return condition.applyCondition(this,params,paramNames);
+                condition.increaseParamNum(this.getParamNum() - 1);
+                let startParamNum = condition.getParamNum();
+                let query = condition.applyCondition(this,params,paramNames);
+                let diff = condition.getParamNum() - startParamNum;
+                this.increaseParamNum(diff);
+                return query;
             });
             this.selectColumns.push(weightedConditionQueries.join(' + ') + ' __condition_weight__');
             this.ordering.push({

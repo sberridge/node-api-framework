@@ -20,13 +20,25 @@ export class WeightedCondition {
         }
     }
 
+    public getParamNum() {
+        return this.query.getParamNum();
+    }
+
+    public increaseParamNum(num:number) {
+        this.query.increaseParamNum(num);
+    }
+
     public applyCondition(sql:iSQL,params:any[],paramNames:any[]):string {        
         var elseStr = null;
         var whereStr = this.query.applyWheres(params,paramNames);
         if(typeof this.nonMatchWeight === 'number') {
             elseStr = this.nonMatchWeight;
         } else {
+            this.nonMatchSubCondition.increaseParamNum(this.getParamNum() - 1);
+            let startParamNum = this.nonMatchSubCondition.getParamNum();
             elseStr = this.nonMatchSubCondition.applyCondition(sql,params,paramNames);
+            let diff = this.nonMatchSubCondition.getParamNum() - startParamNum;
+            this.increaseParamNum(diff);
         }
         var conditionQuery = sql.generateConditional(whereStr, this.weight.toString(), elseStr);
         return conditionQuery;

@@ -309,7 +309,10 @@ export class PostgresData implements iSQL {
     public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: WeightedCondition, escape : boolean) : PostgresData
     public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number, escape : boolean) : PostgresData
     public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight:any, escape : boolean = true) : PostgresData {
-        var weightedQuery = new Query(false);
+        var weightedQuery = new Query(true);
+        weightedQuery.setParamSymbol("$");
+        weightedQuery.setPrefix("");
+        weightedQuery.increaseParamNum(1);
         weightedQuery.where(this.checkReserved(field),comparator,value,escape);
         this.weightedConditions.push(new WeightedCondition(weightedQuery,weight,nonMatchWeight));
         return this;
@@ -318,7 +321,10 @@ export class PostgresData implements iSQL {
     public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: WeightedCondition, escape : boolean) : WeightedCondition
     public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number, escape : boolean) : WeightedCondition
     public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight:any, escape : boolean = true) : WeightedCondition {
-        var weightedQuery = new Query(false);
+        var weightedQuery = new Query(true);
+        weightedQuery.setParamSymbol("$");
+        weightedQuery.setPrefix("");
+        weightedQuery.increaseParamNum(1);
         weightedQuery.where(this.checkReserved(field),comparator,value,escape);
         return new WeightedCondition(weightedQuery,weight,nonMatchWeight);
     }
@@ -353,7 +359,12 @@ export class PostgresData implements iSQL {
 
         if(this.weightedConditions.length > 0) {
             var weightedConditionQueries = this.weightedConditions.map((condition:WeightedCondition)=>{
-                return condition.applyCondition(this,params,[]);
+                condition.increaseParamNum(this.getParamNum() - 1);
+                let startParamNum = condition.getParamNum();
+                let query = condition.applyCondition(this, params, []);
+                let diff = condition.getParamNum() - startParamNum;
+                this.increaseParamNum(diff);
+                return query;
             });
             this.selectColumns.push(weightedConditionQueries.join(' + ') + ' __condition_weight__');
             this.ordering.unshift({
@@ -509,38 +520,46 @@ export class PostgresData implements iSQL {
         });
         
     }
-    public insert(columnValues : object[], escape : boolean) : PostgresData
-    public insert(columnValues : object, escape : boolean) : PostgresData
-    public insert(columnValues : any, escape : boolean = true) : PostgresData {            
+
+    private multiInsert(columnValues: object[], escape: boolean) {
         var params = [];
-        var paramNames = [];
-        if(Array.isArray(columnValues)) {
-            var multiInsertValues = [];
-            columnValues.forEach((insertRecord:object)=>{
-                if(escape) {
-                    for(var key in insertRecord) {
-                        var num = params.push(insertRecord[key]);
-                        var name = num.toString();
-                        insertRecord[key] = "$" + name;
-                        paramNames.push(name);
-                    }
-                }
-                multiInsertValues.push(insertRecord);
-            });
-            this.multiInsertValues = multiInsertValues;
-            
-        } else {
+        var multiInsertValues = [];
+        columnValues.forEach((insertRecord:object)=>{
             if(escape) {
-                for(var key in columnValues) {
-                    var num = params.push(columnValues[key]);
+                for(var key in insertRecord) {
+                    var num = params.push(insertRecord[key]);
                     var name = num.toString();
-                    columnValues[key] = "$" + name;
+                    insertRecord[key] = "$" + name;
                 }
             }
-            this.insertValues = columnValues;
-        }
+            multiInsertValues.push(insertRecord);
+        });
+        this.multiInsertValues = multiInsertValues;
         this.params = params;
-        
+    }
+
+    private singleInsert(columnValues: object, escape: boolean) {
+        var params = [];
+        if(escape) {
+            for(var key in columnValues) {
+                var num = params.push(columnValues[key]);
+                var name = num.toString();
+                columnValues[key] = "$" + name;
+            }
+        }
+        this.insertValues = columnValues;
+        this.params = params;
+    }
+
+
+    public insert(columnValues : object[], escape : boolean) : PostgresData
+    public insert(columnValues : object, escape : boolean) : PostgresData
+    public insert(columnValues : any, escape : boolean = true) : PostgresData {
+        if(Array.isArray(columnValues)) {
+            this.multiInsert(columnValues, escape);            
+        } else {
+            this.singleInsert(columnValues, escape);
+        }        
         return this;
     }
     
@@ -559,24 +578,31 @@ export class PostgresData implements iSQL {
         return this;
     } 
 
+    private generateMultiInsert(): string {
+        const columns = Object.keys(this.multiInsertValues[0]).map(this.checkReserved);
+        let query = columns.join(",") + ") VALUES ";
+        query += this.multiInsertValues.map((insertRow:object)=>{
+            return "(" + Object.values(insertRow).join(",") + ")";
+        }).join(',');
+        return query;
+    }
+
+    private generateSingleInsert(): string {
+        const columns = Object.keys(this.insertValues).map(this.checkReserved);
+        let query = columns.join(",") + ") VALUES ";
+        query += "(" + Object.values(this.insertValues).join(",") + ")";
+        return query;
+    }
+
     public generateInsert() : string {
         var query = "INSERT INTO " + this.tableName + " (";
-        var columns = [];
-        if(typeof this.multiInsertValues == "undefined") {
-            columns = Object.keys(this.insertValues).map(this.checkReserved);
-        } else {
-            columns = Object.keys(this.multiInsertValues[0]).map(this.checkReserved);
-        }
-
-        query += columns.join(",") + ") VALUES ";
 
         if(typeof this.multiInsertValues == "undefined") {
-            query += "(" + Object.values(this.insertValues).join(",") + ")";
+            query += this.generateSingleInsert();
         } else {
-            query += this.multiInsertValues.map((insertRow:object)=>{
-                return "(" + Object.values(insertRow).join(",") + ")";
-            }).join(',');            
+            query += this.generateMultiInsert();
         }
+
         if(this.incrementingField) {
             query += " returning " + this.incrementingField;
         }
