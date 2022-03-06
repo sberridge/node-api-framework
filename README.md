@@ -718,6 +718,40 @@ await dataConnection.stream(100, (results)=>{
 //stream finished
 ```
 
+### Multi Query
+
+It is possible to run multiple queries simultanously using the MultiQuery module.
+
+```typescript
+import { MultiQuery } from './../library/data-access/sql/MultiQuery';
+import { DataAccessFactory } from './../library/data-access/factory';
+import { SQLResult } from './../library/data-access/sql/SQLResult';
+const dataFactory:DataAccessFactory = require('./../library/data-access/factory');
+
+
+let queries:Map<string, iSQL> = new Map([
+    ["get_users", dataFactory.create("my_database")
+                    .table("users")
+                    .cols(["*"])],
+    ["get_titles", dataFactory.create("my_database")
+                    .table("titles")
+                    .cols(["*"])]
+])
+
+let multiQuery = new MultiQuery(queries, MultiQuery.Type.Fetch);
+
+let multiResult = await multiQuery.run();
+
+let usersResult = multiResult.get("get_users");
+
+if(usersResult instanceof SQLResult) {
+    usersResult.rows.forEach(row=>{
+        console.log(row['first_name']);
+    });
+}
+
+```
+
 ## Modelling
 Models are classes designed to handle logic for a single database table record.
 

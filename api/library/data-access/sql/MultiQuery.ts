@@ -1,16 +1,18 @@
+import { ModelCollection } from './../../modelling/ModelCollection';
 import { iSQL } from './interface/SQLInterface';
+import { SQLResult } from './SQLResult';
 
 
 export class MultiQuery {
     private queries:Map<string, iSQL>;
-    private results = {};
+    private results:Map<string, SQLResult | ModelCollection> = new Map;
     private completedQueries = 0;
     private type: MultiQuery.Type;
     
     constructor(queries:Map<string, iSQL>,type:MultiQuery.Type=MultiQuery.Type.Fetch) {
         this.queries = queries;
         for(let key of queries.keys()) {
-            this.results[key] = null;
+            this.results.set(key,null);
         }
         this.type = type;
         
@@ -18,7 +20,7 @@ export class MultiQuery {
 
     private execute(key:string):Promise<void> {
         return new Promise((resolve,reject)=>{
-            (():any=>{
+            (():Promise<SQLResult | ModelCollection>=>{
                 switch(this.type) {
                     case MultiQuery.Type.Fetch:
                         return (<iSQL>this.queries.get(key)).fetch();
@@ -30,7 +32,7 @@ export class MultiQuery {
                         return (<iSQL>this.queries.get(key)).delete();
                 }
             })().then((result)=>{
-                this.results[key] = result;
+                this.results.set(key, result);
                 this.completedQueries++;
                 resolve();
             }).catch(e=>{
@@ -39,7 +41,7 @@ export class MultiQuery {
         });
     }
 
-    public run() {
+    public run():Promise<Map<string, SQLResult | ModelCollection>> {
         return new Promise((resolve,reject)=>{
             for(let key of this.queries.keys()) {
                 this.execute(key).then(()=>{
