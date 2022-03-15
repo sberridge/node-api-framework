@@ -1,9 +1,9 @@
 import { Express, NextFunction, Request, Response } from "express";
 import { Config } from "./api/library/Config";
 import session = require('cookie-session');
+import expressWs = require('express-ws');
 
 var express = require('express'),
-  expressWs = require('express-ws'),
   cors = require('cors'),
   app: Express = express(),
   port = process.env.PORT || 3000,

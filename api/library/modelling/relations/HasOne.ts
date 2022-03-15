@@ -47,70 +47,86 @@ export class HasOne implements iRelation {
         return daQuery
     }
 
+    private async getFilteredResult(ids:any[]) {
+        let daQuery = this.query;
+        daQuery.whereIn("__primary__." + this.primaryModel.getPrimaryKey(),ids, true);
+        let results = await daQuery.fetch();
+        let groupedResults = {};
+        let modelConstructor: any = this.foreignModel.constructor;
+        results.rows.forEach(result=>{
+            if(!(result["__table_" + this.primaryModel.getTable() + "__key"] in groupedResults)) {
+                var resModel: BaseModel = new modelConstructor();
+                if(!resModel.getSqlConfig()) {
+                    resModel.setSqlConfig(this.primaryModel.getSqlConfig());
+                }
+                resModel.loadData(result);
+                resModel.setVisibleColumns(Object.keys(result));
+                groupedResults[result["__table_" + this.primaryModel.getTable() + "__key"]] = resModel;
+            }
+        });
+        return results;
+    }
+
+    private async getUnfilteredResult() {
+        let daQuery = this.query;
+        daQuery.where("__primary__." + this.primaryModel.getPrimaryKey(),"=",this.primaryModel.getColumn(this.primaryModel.getPrimaryKey()), true);
+        let results = await daQuery.fetchModels();
+        var model = results.first();
+        return model;            
+    }
+
     public getResult(ids: any[]): Promise<object>
     public getResult(): Promise<BaseModel>
     public getResult(ids: any = null): Promise<any> {
-        return new Promise((resolve,reject)=>{
-            var daQuery = this.query;
+        return new Promise(async (resolve,reject)=>{
             if(ids !== null) {
-                daQuery.whereIn("__primary__." + this.primaryModel.getPrimaryKey(),ids, true);
-                daQuery.fetch().then((results: SQLResult)=>{
-                    var groupedResults = {};
-                    var modelConstructor: any = this.foreignModel.constructor;
-                    results.rows.forEach(result=>{
-                        if(!(result["__table_" + this.primaryModel.getTable() + "__key"] in groupedResults)) {
-                            var resModel: BaseModel = new modelConstructor();
-                            if(!resModel.getSqlConfig()) {
-                                resModel.setSqlConfig(this.primaryModel.getSqlConfig());
-                            }
-                            resModel.loadData(result);
-                            resModel.setVisibleColumns(Object.keys(result));
-                            groupedResults[result["__table_" + this.primaryModel.getTable() + "__key"]] = resModel;
-                        }
-                    });
-                    resolve(results);
-                });
+                resolve(await this.getFilteredResult(ids));
             } else {
-                daQuery.where("__primary__." + this.primaryModel.getPrimaryKey(),"=",this.primaryModel.getColumn(this.primaryModel.getPrimaryKey()), true);
-                daQuery.fetchModels().then((results: ModelCollection)=>{
-                    var model = results.first();
-                    resolve(model);
-                });
+                resolve(await this.getUnfilteredResult());
             }            
             
         });            
     }
 
+
+    private async getFilteredResults(ids:any[]) {
+        let daQuery = this.query;
+        daQuery.whereIn("__primary__." + this.primaryModel.getPrimaryKey(),ids, true);
+        let results = await daQuery.fetch();
+        var groupedResults = {};
+        var modelConstructor: any = this.foreignModel.constructor;
+        results.rows.forEach(result=>{
+            if(!(result["__table_" + this.primaryModel.getTable() + "__key"] in groupedResults)) {
+                groupedResults[result["__table_" + this.primaryModel.getTable() + "__key"]] = new ModelCollection;
+            }
+            var resModel: BaseModel = new modelConstructor();
+            if(!resModel.getSqlConfig()) {
+                resModel.setSqlConfig(this.primaryModel.getSqlConfig());
+            }
+            resModel.loadData(result);
+            resModel.setVisibleColumns(Object.keys(result));
+            groupedResults[result["__table_" + this.primaryModel.getTable() + "__key"]].add(resModel);
+        });
+
+        return groupedResults;
+    }
+
+    private async getUnfilteredResults() {
+        let daQuery = this.query;
+        daQuery.where("__primary__." + this.primaryModel.getPrimaryKey(),"=",this.primaryModel.getColumn(this.primaryModel.getPrimaryKey()), true);
+        let results = await daQuery.fetchModels();
+        return results;
+    }
+
     public getResults(ids: any[]): Promise<object>
     public getResults(): Promise<ModelCollection>
     public getResults(ids: any = null): Promise<any> {
-        return new Promise((resolve,reject)=>{
+        return new Promise(async (resolve,reject)=>{
             var daQuery = this.query;
             if(ids !== null) {
-                daQuery.whereIn("__primary__." + this.primaryModel.getPrimaryKey(),ids, true);
-                daQuery.fetch().then((results: SQLResult)=>{
-                    var groupedResults = {};
-                    var modelConstructor: any = this.foreignModel.constructor;
-                    results.rows.forEach(result=>{
-                        if(!(result["__table_" + this.primaryModel.getTable() + "__key"] in groupedResults)) {
-                            groupedResults[result["__table_" + this.primaryModel.getTable() + "__key"]] = new ModelCollection;
-                        }
-                        var resModel: BaseModel = new modelConstructor();
-                        if(!resModel.getSqlConfig()) {
-                            resModel.setSqlConfig(this.primaryModel.getSqlConfig());
-                        }
-                        resModel.loadData(result);
-                        resModel.setVisibleColumns(Object.keys(result));
-                        groupedResults[result["__table_" + this.primaryModel.getTable() + "__key"]].add(resModel);
-                    });
-
-                    resolve(groupedResults);
-                });
+                resolve(await this.getFilteredResults(ids));
             } else {
-                daQuery.where("__primary__." + this.primaryModel.getPrimaryKey(),"=",this.primaryModel.getColumn(this.primaryModel.getPrimaryKey()), true);
-                daQuery.fetchModels().then((results: ModelCollection)=>{
-                    resolve(results);
-                });
+                resolve(await this.getUnfilteredResults());
             }            
             
         });            

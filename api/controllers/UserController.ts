@@ -4,7 +4,7 @@ import { ResponseGenerator } from './../library/ResponseGenerator';
 import {User} from '../models/User';
 import {WSControl} from './../library/websockets/WSControl';
 import {JWT} from './../library/authentication/JWT';
-const ws:WSControl = require('./../library/websockets/WSControlFactory');
+const ws:WSControl = WSControl.getInstance();
 
 
 exports.fake_auth = async function(req:Request, res:Response, next:NextFunction) {

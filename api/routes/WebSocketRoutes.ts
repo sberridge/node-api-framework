@@ -1,17 +1,20 @@
 'use strict';
-import {Express, Request} from 'express';
+import {Request} from 'express';
 import {WSUser, WSControl} from '../library/websockets/WSControl'
 import { JWT } from './../library/authentication/JWT';
+import expressWs = require('express-ws');
 const WSController:WSControl = WSControl.getInstance();
 
 var WSUserID = 0;
 
 
-module.exports = function(app:Express) {
+module.exports = function(app:expressWs.Application) {
     
-    app['ws']('/ws',(ws,req:Request)=>{
+    app.ws('/ws',(ws,req:Request)=>{
+
+      let isAlive = true
       
-      ws.isAlive = true;
+      isAlive = true;
 
       const authData = JWT.getInstance().verify(req);
 
@@ -65,15 +68,15 @@ module.exports = function(app:Express) {
 
       
       ws.on('pong',()=>{
-        ws.isAlive = true;
+        isAlive = true;
       });
 
       var pingTimeout = setInterval(()=>{
-        if(!ws.isAlive) {
+        if(!isAlive) {
           clearTimeout(pingTimeout);
           return ws.close();
         }
-        ws.isAlive = false;
+        isAlive = false;
         ws.ping(()=>{});
       },30000);
     });

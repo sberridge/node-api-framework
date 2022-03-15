@@ -1,7 +1,8 @@
+import { WebSocket } from "ws";
 export class WSUser {
-    public ws;
+    public ws:WebSocket;
     public user;
-    constructor(ws,user) {
+    constructor(ws:WebSocket,user) {
         this.ws = ws;
         this.user = user;
     }
