@@ -15,19 +15,19 @@ export class WSControl {
         this.websockets.set(key,wsUser);
         
     }
-    public getUser(key): WSUser {
+    public getUser(key:string): WSUser {
         if(this.websockets.has(key)) {
             return this.websockets.get(key);
         }
         return null;
     }
-    public removeUser(key) {
+    public removeUser(key:string) {
         if(this.websockets.has(key)) {
             return this.websockets.delete(key);
         }
         return false;
     }
-    public forEach(cb:CallableFunction) {
+    public forEach(cb:(WSUser:WSUser,id:string)=>void) {
         this.websockets.forEach((v,key)=>{
             cb(v,key);
         });

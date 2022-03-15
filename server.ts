@@ -1,4 +1,4 @@
-import { Express } from "express";
+import { Express, NextFunction, Request, Response } from "express";
 import { Config } from "./api/library/Config";
 
 var session = require('cookie-session');
@@ -32,11 +32,10 @@ var corsOptions = {
   },
   credentials:true
 }
-//here is the magic
+
 app.use(cors(corsOptions));
 
-app.use(function(req,res,next) {
-  //do something before the request
+app.use(function(req:Request,res:Response,next:NextFunction) {
   next();
 });
 

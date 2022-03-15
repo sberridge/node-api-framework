@@ -1236,5 +1236,142 @@ await user.eagerLoad(new Map([
 res.json(ResponseGenerator.success(user.toJSON()));
 ```
 
-## Websocket Support
+## WebSocket Support
 
+It is possible to connect to the API via webSockets using the default /ws route.
+
+```javascript
+let wsConnection = new WebSocket("ws://localhost:3000/ws");
+
+wsConnection.onopen = ()=>{
+    console.log("connected!");
+    
+    wsConnection.send(JSON.stringify({
+        "message": "hello"
+    }));
+};
+
+wsConnection.onmessage = (m)=>{
+    console.log(`received: ${m}`);
+};
+
+wsConnection.onclose = ()=>{
+    console.log("disconnected");
+};
+```
+
+The websocket connection is handled in ./routes/WebSocketRoutes.ts
+
+### WebSocket Controller
+
+A module called WSControl is used to handle the WebSocket connections.
+
+This is used by default in the WebSocket route to handle connections and send messages.
+
+_see ./routes/WebSocketRoutes.ts for full example_
+```typescript
+import {WSUser, WSControl} from '../library/websockets/WSControl'
+
+//import the controller handling global connections
+const WSController:WSControl = require("./../library/websockets/WSControlFactory");
+
+let wsId = 1;
+
+module.exports = function(app:Express) {    
+    app['ws']('/ws',(ws,req:Request)=>{
+
+        const connectionId = wsId++;
+
+        //create a WSUser instance holding the connection and some identifying information
+        let user = new WSUser(ws, {
+            "id": connectionId
+        });
+
+        //add user to the controller
+        WSController.setUser(connectionId.toString(), user);
+
+        //send message to user
+        WSController.send(user.user.id, {
+            "message": "hello"
+        });
+
+        //send message to all users
+        WSController.sendToAll({
+            "message": "hello everybody"
+        });
+
+        //loop through connected users
+        WSController.forEach((user, id)=>{
+            
+        });
+
+    });
+}
+```
+
+
+### Authenticating WebSocket Connections
+
+The JWT library can be used within the WS route to handle authentication.
+
+```typescript
+import { JWT } from './../authentication/JWT'
+import {WSUser, WSControl} from '../library/websockets/WSControl'
+
+//import the controller handling global connections
+const WSController:WSControl = require("./../library/websockets/WSControlFactory");
+const jwt:JWT = require('./../authentication/JWT');
+
+module.exports = function(app:Express) {    
+    app['ws']('/ws',(ws,req:Request)=>{
+        const authData = jwt.verify(req);
+        if(!authData) {
+            ws.close();
+            return;
+        }
+
+        //create a WSUser instance holding the connection and some identifying information
+        let user = new WSUser(ws, {
+            "id": authData['user_id']
+        });
+
+        //add user to the controller
+        WSController.setUser(authData['user_id'].toString(), user);
+    })
+}
+```
+
+### Utilise WebSockets during Requests
+
+The WSController can be accessed at any point during a request lifecycle to handle sending messages to connected users.
+
+*api/controllers/UserController.ts*
+```typescript
+'use strict';
+import { NextFunction, Request, Response } from 'express';
+import { ResponseGenerator } from './../library/ResponseGenerator';
+import {WSControl} from './../library/websockets/WSControl';
+import {JWT} from './../library/authentication/JWT';
+
+const jwt:JWT = require('./../library/authentication/JWT');
+const ws:WSControl = require('./../library/websockets/WSControlFactory');
+
+exports.get_users = async function(req:Request, res:Response, next:NextFunction) {
+
+    const authData = jwt.verify(req);
+
+    if(authData) {
+        //send message to authenticated WS user
+        ws.send(authData['user_id'], {
+            "message": "You accessed the get_users route!"
+        });
+    }
+
+    ws.sendToAll({
+        "message": "Someone accessed the get_users route!"
+    });
+
+    res.json(ResponseGenerator.success("It works!");
+    next();
+};
+```

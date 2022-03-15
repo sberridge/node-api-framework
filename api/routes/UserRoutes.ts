@@ -9,4 +9,7 @@ module.exports = function(app:Express) {
     //app.all('/users',AuthFilter);
     app.route('/users')
         .get(userController.get_users);
+
+    app.route('/auth')
+        .get(userController.fake_auth);
 };

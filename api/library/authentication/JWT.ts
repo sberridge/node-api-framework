@@ -26,9 +26,9 @@ export class JWT {
         return true;
     }
 
-    public verify(req): object {
-        if("jwt" in req.session) {
-            var jwtParts = req.session.jwt.split(".");
+    public verify(req:Request): object {
+        if("jwt" in req['session']) {
+            var jwtParts = req['session'].jwt.split(".");
             if(jwtParts.length != 3) {
                 return null;
             }
