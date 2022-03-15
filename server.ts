@@ -1,7 +1,7 @@
 import { Express, NextFunction, Request, Response } from "express";
 import { Config } from "./api/library/Config";
+import session = require('cookie-session');
 
-var session = require('cookie-session');
 var express = require('express'),
   expressWs = require('express-ws'),
   cors = require('cors'),
@@ -12,13 +12,9 @@ var express = require('express'),
 expressWs(app);
 var ses = session({
   name: 'session',
-  resave: false,
-  saveUninitialized: false,
   secret: Config.get().session_secret,
-  cookie: {
-    sameSite: "lax",
-    httpOnly: true
-  }
+  sameSite: "lax",
+  httpOnly: true
 });
 
 app.use(ses);
