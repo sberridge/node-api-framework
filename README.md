@@ -1271,8 +1271,7 @@ _see ./routes/WebSocketRoutes.ts for full example_
 ```typescript
 import {WSUser, WSControl} from '../library/websockets/WSControl'
 
-//import the controller handling global connections
-const WSController:WSControl = require("./../library/websockets/WSControlFactory");
+const WSController:WSControl = WSControl.getInstance();
 
 let wsId = 1;
 
@@ -1317,8 +1316,7 @@ The JWT library can be used within the WS route to handle authentication.
 import { JWT } from './../authentication/JWT'
 import {WSUser, WSControl} from '../library/websockets/WSControl'
 
-//import the controller handling global connections
-const WSController:WSControl = require("./../library/websockets/WSControlFactory");
+const WSController:WSControl = WSControl.getInstance();
 
 module.exports = function(app:Express) {    
     app['ws']('/ws',(ws,req:Request)=>{
@@ -1351,7 +1349,7 @@ import { ResponseGenerator } from './../library/ResponseGenerator';
 import {WSControl} from './../library/websockets/WSControl';
 import {JWT} from './../library/authentication/JWT';
 
-const ws:WSControl = require('./../library/websockets/WSControlFactory');
+const ws:WSControl = WSControl.getInstance();
 
 exports.get_users = async function(req:Request, res:Response, next:NextFunction) {
 

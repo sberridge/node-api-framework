@@ -2,7 +2,7 @@
 import {Express, Request} from 'express';
 import {WSUser, WSControl} from '../library/websockets/WSControl'
 import { JWT } from './../library/authentication/JWT';
-const WSController:WSControl = require("./../library/websockets/WSControlFactory");
+const WSController:WSControl = WSControl.getInstance();
 
 var WSUserID = 0;
 

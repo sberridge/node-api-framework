@@ -8,8 +8,15 @@ export class WSUser {
 }
 export class WSControl {
     private websockets:Map<string,WSUser> = new Map;
-    constructor() {
+    private static instance: WSControl = null;
+    private constructor() {
 
+    }
+    public static getInstance() {
+        if(WSControl.instance === null) {
+            WSControl.instance = new WSControl;
+        }
+        return WSControl.instance;
     }
     public setUser(key:string, wsUser: WSUser) {
         this.websockets.set(key,wsUser);
