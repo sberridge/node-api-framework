@@ -5,11 +5,10 @@ import {User} from '../models/User';
 import {WSControl} from './../library/websockets/WSControl';
 import {JWT} from './../library/authentication/JWT';
 const ws:WSControl = require('./../library/websockets/WSControlFactory');
-const jwt:JWT = require('./../library/authentication/JWT');
 
 
 exports.fake_auth = async function(req:Request, res:Response, next:NextFunction) {
-    jwt.sign({
+    JWT.getInstance().sign({
         "user_id": "123"
     }, req);
     res.json(ResponseGenerator.success("done"));
@@ -17,7 +16,7 @@ exports.fake_auth = async function(req:Request, res:Response, next:NextFunction)
 };
 
 exports.get_users = async function(req:Request, res:Response, next:NextFunction) {
-    const authData = jwt.verify(req);
+    const authData = JWT.getInstance().verify(req);
     if(authData) {
         ws.send(authData['user_id'], {
             "message": "you called get_users"

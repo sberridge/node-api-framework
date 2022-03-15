@@ -202,7 +202,6 @@ To register a JWT with the client, you must first authenticate a user via a requ
 import { Hashing } from './../library/Hashing';
 import { Validator } from './../library/validation/Validator';
 import { JWT } from './../authentication/JWT'
-const jwt:JWT = require('./../authentication/JWT');
 
 exports.login = async function(req:Request, res:Result, next:NextFunction) {
 
@@ -238,7 +237,7 @@ exports.login = async function(req:Request, res:Result, next:NextFunction) {
     }
 
     // Sign and register JWT in the session with users ID
-    jwt.sign({
+    JWT.getInstance().sign({
         "user_id": user.getColumn("id")
     }, req);
 
@@ -1320,11 +1319,10 @@ import {WSUser, WSControl} from '../library/websockets/WSControl'
 
 //import the controller handling global connections
 const WSController:WSControl = require("./../library/websockets/WSControlFactory");
-const jwt:JWT = require('./../authentication/JWT');
 
 module.exports = function(app:Express) {    
     app['ws']('/ws',(ws,req:Request)=>{
-        const authData = jwt.verify(req);
+        const authData = JWT.getInstance().verify(req);
         if(!authData) {
             ws.close();
             return;
@@ -1353,12 +1351,11 @@ import { ResponseGenerator } from './../library/ResponseGenerator';
 import {WSControl} from './../library/websockets/WSControl';
 import {JWT} from './../library/authentication/JWT';
 
-const jwt:JWT = require('./../library/authentication/JWT');
 const ws:WSControl = require('./../library/websockets/WSControlFactory');
 
 exports.get_users = async function(req:Request, res:Response, next:NextFunction) {
 
-    const authData = jwt.verify(req);
+    const authData = JWT.getInstance().verify(req);
 
     if(authData) {
         //send message to authenticated WS user

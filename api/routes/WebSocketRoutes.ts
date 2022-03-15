@@ -4,8 +4,6 @@ import {WSUser, WSControl} from '../library/websockets/WSControl'
 import { JWT } from './../library/authentication/JWT';
 const WSController:WSControl = require("./../library/websockets/WSControlFactory");
 
-const JWTLib: JWT = require('../library/authentication/JWT');
-
 var WSUserID = 0;
 
 
@@ -15,7 +13,7 @@ module.exports = function(app:Express) {
       
       ws.isAlive = true;
 
-      const authData = JWTLib.verify(req);
+      const authData = JWT.getInstance().verify(req);
 
       let user:WSUser = null;
       if(authData) {

@@ -3,8 +3,16 @@ import * as randomString from 'crypto-random-string';
 import * as crypto from 'crypto';
 export class JWT {
     private key: string
-    constructor() {
+    private static instance:JWT = null;
+    private constructor() {
         this.key= randomString({length:30,characters:"1234567890qwertyuiopasdfghjklzxcvbnm!$%#-="});
+    }
+
+    public static getInstance() {
+        if(JWT.instance === null) {
+            JWT.instance = new JWT();
+        }
+        return JWT.instance;
     }
 
     private base64URL(string:string) {
@@ -60,6 +68,3 @@ export class JWT {
         
     }
 }
-
-
-module.exports = new JWT()
