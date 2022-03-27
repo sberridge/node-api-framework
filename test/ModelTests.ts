@@ -2,16 +2,14 @@ var assert:Chai.Assert = require('chai').assert;
 var should:Chai.Should = require('chai').should();
 var expect:Chai.ExpectStatic = require('chai').expect;
 import {User} from './../api/models/User';
-import {Country} from './../api/models/Country';
 import {City} from './../api/models/City';
-import {Gender} from './../api/models/Gender';
-import {Title} from './../api/models/Title';
 import {UserSettings} from './../api/models/UserSettings';
 import { ModelCollection } from './../api/library/modelling/ModelCollection';
 import { iSQL } from './../api/library/data-access/sql/interface/SQLInterface';
 import { SQLResult } from './../api/library/data-access/sql/SQLResult';
 import { Party } from './../api/models/Party';
-var factory = require('./../api/library/data-access/factory');
+import DataAccessFactory from '../api/library/data-access/factory';
+var factory = DataAccessFactory.getInstance();
 describe('ModellingTests',function(){
     
     it('find model',function(done) {

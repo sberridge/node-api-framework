@@ -1,10 +1,11 @@
-var dataFactory = require('./../../data-access/factory');
+
 import {iRelation} from './interface/RelationInterface';
 import {iSQL} from '../../data-access/sql/interface/SQLInterface';
 import {BaseModel} from '../BaseModel';
 import {Query} from './../../data-access/sql/Query';
 import { ModelCollection } from '../ModelCollection';
-import { SQLResult } from './../../data-access/sql/SQLResult';
+import DataAccessFactory from './../../data-access/factory';
+const dataFactory = DataAccessFactory.getInstance();
 
 export class BelongsTo implements iRelation {
     private primaryModel: BaseModel;

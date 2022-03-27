@@ -5,15 +5,18 @@ import { Config } from './../Config';
 import { ConnectionConfig } from './sql/interface/SQLConnectionConfig';
 import { PostgresData } from './sql/PostgresData';
 
-export class DataAccessFactory {
+export default class DataAccessFactory {
     private config = Config.get().databases.sql;
-    private ready:boolean = false;
+    private ready:boolean = true;
     private readyFuncs = [];
-    constructor() {
-        this.ready = true;
-        this.readyFuncs.forEach((func)=>{
-            func();
-        });
+    private static instance:DataAccessFactory = null;
+    private constructor() {
+    }
+    public static getInstance() {
+        if(DataAccessFactory.instance == null) {
+            DataAccessFactory.instance = new DataAccessFactory();
+        }
+        return DataAccessFactory.instance;
     }
     private getConnectionConfig(configKey: string): ConnectionConfig {
         let connectionConfig:ConnectionConfig = {};        
@@ -67,4 +70,3 @@ export class DataAccessFactory {
         return (name in this.config);
     }
 }
-module.exports = new DataAccessFactory();

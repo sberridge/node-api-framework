@@ -1,10 +1,10 @@
-var dataFactory = require('./../../data-access/factory');
 import {iRelation} from './interface/RelationInterface';
 import {iSQL} from '../../data-access/sql/interface/SQLInterface';
 import {BaseModel} from '../BaseModel';
 import {ModelCollection} from '../ModelCollection';
 import {Query} from './../../data-access/sql/Query';
-import { SQLResult } from './../../data-access/sql/SQLResult';
+import DataAccessFactory from './../../data-access/factory';
+const dataFactory = DataAccessFactory.getInstance();
 
 export class HasOne implements iRelation {
     private primaryModel: BaseModel;

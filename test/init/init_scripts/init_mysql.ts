@@ -1,7 +1,7 @@
 import { iSQL } from "../../../api/library/data-access/sql/interface/SQLInterface";
-import {DataAccessFactory} from "../../../api/library/data-access/factory";
-import { Request, Response } from "node-fetch";
-var factory:DataAccessFactory = require('../../../api/library/data-access/factory');
+import DataAccessFactory from "../../../api/library/data-access/factory";
+import { Response } from "node-fetch";
+var factory:DataAccessFactory = DataAccessFactory.getInstance();
 const fetch = require('node-fetch');
 
 export async function init() {

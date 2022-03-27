@@ -2,15 +2,13 @@
 import { MultiQuery } from "../api/library/data-access/sql/MultiQuery";
 import { iSQL } from "../api/library/data-access/sql/interface/SQLInterface";
 import { Query } from "../api/library/data-access/sql/Query";
-import { ModelCollection } from "../api/library/modelling/ModelCollection";
 import { SQLResult } from "../api/library/data-access/sql/SQLResult";
-import { DataAccessFactory } from "api/library/data-access/factory";
-import { SQLOrder } from "../api/library/data-access/sql/interface/SQLOrder";
+import DataAccessFactory from "../api/library/data-access/factory";
 
 var assert:Chai.Assert = require('chai').assert;
 var should:Chai.Should = require('chai').should();
 var expect:Chai.ExpectStatic = require('chai').expect;
-var factory:DataAccessFactory = require('./../api/library/data-access/factory');
+var factory:DataAccessFactory = DataAccessFactory.getInstance();
 
 describe('MySQLTests',function(){
     

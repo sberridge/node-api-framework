@@ -6,8 +6,8 @@ import {HasMany} from './relations/HasMany';
 import { ModelCollection } from './ModelCollection';
 import { iSQL } from '../data-access/sql/interface/SQLInterface';
 import { SQLResult } from '../data-access/sql/SQLResult';
-import { DataAccessFactory } from '../data-access/factory';
-var dataFactory:DataAccessFactory = require('./../data-access/factory');
+import DataAccessFactory from '../data-access/factory';
+var dataFactory:DataAccessFactory = DataAccessFactory.getInstance();
 
 export class BaseModel {
     private tableName: string;
