@@ -1,4 +1,4 @@
-import { iSQL } from "../../../api/library/data-access/sql/interface/SQLInterface";
+import iSQL from "../../../api/library/data-access/sql/interface/SQLInterface";
 import DataAccessFactory from "../../../api/library/data-access/factory";
 import { Response } from "node-fetch";
 var factory:DataAccessFactory = DataAccessFactory.getInstance();

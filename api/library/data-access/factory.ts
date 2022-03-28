@@ -1,9 +1,9 @@
-import {MySQLData} from './sql/MySQLData';
-import {MSSQLData} from './sql/MSSQLData';
-import { iSQL } from './sql/interface/SQLInterface';
-import { Config } from './../Config';
-import { ConnectionConfig } from './sql/interface/SQLConnectionConfig';
-import { PostgresData } from './sql/PostgresData';
+import MySQLData from './sql/MySQLData';
+import MSSQLData from './sql/MSSQLData';
+import iSQL from './sql/interface/SQLInterface';
+import Config from './../Config';
+import ConnectionConfig from './sql/interface/SQLConnectionConfig';
+import PostgresData from './sql/PostgresData';
 
 export default class DataAccessFactory {
     private config = Config.get().databases.sql;

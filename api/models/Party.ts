@@ -1,4 +1,4 @@
-import {BaseModel} from './../library/modelling/BaseModel';
+import BaseModel from './../library/modelling/BaseModel';
 import {City} from './City';
 import {User} from './User';
 

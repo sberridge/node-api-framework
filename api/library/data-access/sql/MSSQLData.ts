@@ -1,16 +1,16 @@
 import * as mssql from 'mssql';
-import {iSQL} from "./interface/SQLInterface";
+import iSQL from "./interface/SQLInterface";
 import {SQLOrder} from "./interface/SQLOrder";
-import {Query} from"./Query";
-import {ModelCollection} from './../../modelling/ModelCollection';
-import { WeightedCondition } from "./WeightedCondition";
-import { SQLResult } from "./SQLResult";
-import { BaseModel } from "./../../modelling/BaseModel";
+import Query from"./Query";
+import ModelCollection from './../../modelling/ModelCollection';
+import WeightedCondition from "./WeightedCondition";
+import SQLResult from "./SQLResult";
+import BaseModel from "./../../modelling/BaseModel";
 import { comparison, pagination } from "./interface/SQLTypes";
-import { ConnectionConfig } from "./interface/SQLConnectionConfig";
+import ConnectionConfig from "./interface/SQLConnectionConfig";
 
 
-export class MSSQLData implements iSQL {
+export default class MSSQLData implements iSQL {
     private tableName : string;
     private selectColumns : string[];
     private additionalColumns: string[] = [];

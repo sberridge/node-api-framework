@@ -1,6 +1,6 @@
-import {iSQL} from './interface/SQLInterface';
+import iSQL from './interface/SQLInterface';
 import { comparison } from './interface/SQLTypes';
-export class Query {
+export default class Query {
 
     private wheres : object[] = [];
     private namedParams: boolean;

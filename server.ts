@@ -1,5 +1,5 @@
 import { Express, NextFunction, Request, Response } from "express";
-import { Config } from "./api/library/Config";
+import Config from "./api/library/Config";
 import session = require('cookie-session');
 import expressWs = require('express-ws');
 

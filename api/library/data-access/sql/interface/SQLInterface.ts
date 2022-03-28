@@ -1,11 +1,11 @@
-import { ModelCollection } from './../../../modelling/ModelCollection';
-import { SQLResult } from "../SQLResult";
-import { WeightedCondition } from "../WeightedCondition";
-import { Query } from '../Query';
+import ModelCollection from './../../../modelling/ModelCollection';
+import SQLResult from "../SQLResult";
+import WeightedCondition from "../WeightedCondition";
+import Query from '../Query';
 import { SQLOrder } from './SQLOrder';
 import { comparison, pagination } from './SQLTypes';
 
-    export interface iSQL {
+    export default interface iSQL {
 
         doesTableExist(tableName:string) : Promise<boolean>
         doesColumnExist(tableName:string,column:string) : Promise<boolean>

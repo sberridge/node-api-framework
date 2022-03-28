@@ -1,8 +1,8 @@
-import { BaseModel } from '../../BaseModel';
-import { ModelCollection } from '../../ModelCollection';
-import { iSQL } from 'api/library/data-access/sql/interface/SQLInterface';
+import BaseModel from '../../BaseModel';
+import ModelCollection from '../../ModelCollection';
+import iSQL from 'api/library/data-access/sql/interface/SQLInterface';
 
-export interface iRelation {
+export default interface iRelation {
     returnsMany: boolean;
     generateQuery(): any
     

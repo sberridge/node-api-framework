@@ -1,4 +1,4 @@
-export type ConnectionConfig = {
+type ConnectionConfig = {
     "type"?: string,
     "host"?: string,
     "port"?: number,
@@ -7,3 +7,5 @@ export type ConnectionConfig = {
     "password"?: string,
     "name"?: string
 }
+
+export default ConnectionConfig;

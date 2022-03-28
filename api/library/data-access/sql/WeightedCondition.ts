@@ -1,7 +1,7 @@
-import { iSQL } from "./interface/SQLInterface";
-import { Query } from "./Query";
+import iSQL from "./interface/SQLInterface";
+import Query from "./Query";
 
-export class WeightedCondition {
+export default class WeightedCondition {
     private query : Query
     private weight: number
     private nonMatchWeight: number

@@ -1,4 +1,4 @@
-import {BaseModel} from './../library/modelling/BaseModel';
+import BaseModel from './../library/modelling/BaseModel';
 import { Party } from './Party';
 import {User} from './User';
 

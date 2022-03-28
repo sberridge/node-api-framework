@@ -1,4 +1,4 @@
-import {BaseModel} from './../library/modelling/BaseModel';
+import BaseModel from './../library/modelling/BaseModel';
 import {User} from './User';
 
 export class Gender extends BaseModel {

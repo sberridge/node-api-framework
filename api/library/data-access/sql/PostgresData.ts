@@ -1,18 +1,18 @@
 import * as pg from 'pg';
-import {iSQL} from "./interface/SQLInterface";
+import iSQL from "./interface/SQLInterface";
 import {SQLOrder} from "./interface/SQLOrder";
-import {Query} from"./Query";
-import {ModelCollection} from './../../modelling/ModelCollection';
-import {WeightedCondition} from './../sql/WeightedCondition';
-import { SQLResult } from "./../sql/SQLResult";
-import { BaseModel } from "./../../modelling/BaseModel";
+import Query from"./Query";
+import ModelCollection from './../../modelling/ModelCollection';
+import WeightedCondition from './../sql/WeightedCondition';
+import SQLResult from "./../sql/SQLResult";
+import BaseModel from "./../../modelling/BaseModel";
 import { comparison, pagination } from "./interface/SQLTypes";
-import { ConnectionConfig } from './interface/SQLConnectionConfig';
+import ConnectionConfig from './interface/SQLConnectionConfig';
 
 const  QueryStream = require('pg-query-stream');
 
 
-export class PostgresData implements iSQL {
+export default class PostgresData implements iSQL {
     private tableName : string;
     private selectColumns : string[];
     private additionalColumns: string[] = [];

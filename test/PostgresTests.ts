@@ -1,8 +1,8 @@
 'use strict';
 import { MultiQuery } from "../api/library/data-access/sql/MultiQuery";
-import { iSQL } from "../api/library/data-access/sql/interface/SQLInterface";
-import { Query } from "../api/library/data-access/sql/Query";
-import { SQLResult } from "../api/library/data-access/sql/SQLResult";
+import iSQL from "../api/library/data-access/sql/interface/SQLInterface";
+import Query from "../api/library/data-access/sql/Query";
+import SQLResult from "../api/library/data-access/sql/SQLResult";
 import DataAccessFactory from "../api/library/data-access/factory";
 
 var assert:Chai.Assert = require('chai').assert;

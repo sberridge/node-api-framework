@@ -1,7 +1,7 @@
-import { iSQL } from '../data-access/sql/interface/SQLInterface';
-import {BaseModel} from './BaseModel'
-import { iRelation } from './relations/interface/RelationInterface';
-export class ModelCollection {
+import iSQL from '../data-access/sql/interface/SQLInterface';
+import BaseModel from './BaseModel'
+import iRelation from './relations/interface/RelationInterface';
+export default class ModelCollection {
     private models: BaseModel[] = [];
     private index = 0;
     private modelIdHash = {};

@@ -1,15 +1,15 @@
 
-import {BelongsTo} from './relations/BelongsTo';
-import {BelongsToMany} from './relations/BelongsToMany';
-import {HasOne} from './relations/HasOne';
-import {HasMany} from './relations/HasMany';
-import { ModelCollection } from './ModelCollection';
-import { iSQL } from '../data-access/sql/interface/SQLInterface';
-import { SQLResult } from '../data-access/sql/SQLResult';
+import BelongsTo from './relations/BelongsTo';
+import BelongsToMany from './relations/BelongsToMany';
+import HasOne from './relations/HasOne';
+import HasMany from './relations/HasMany';
+import ModelCollection from './ModelCollection';
+import iSQL from '../data-access/sql/interface/SQLInterface';
+import SQLResult from '../data-access/sql/SQLResult';
 import DataAccessFactory from '../data-access/factory';
 var dataFactory:DataAccessFactory = DataAccessFactory.getInstance();
 
-export class BaseModel {
+export default class BaseModel {
     private tableName: string;
     private sqlConfig: string;
     private primaryKey: string;

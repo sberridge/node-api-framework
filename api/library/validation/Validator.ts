@@ -1,6 +1,6 @@
-import { BaseModel } from '../modelling/BaseModel';
-import { iSQL } from '../data-access/sql/interface/SQLInterface';
-import { ModelCollection } from '../modelling/ModelCollection';
+import BaseModel from '../modelling/BaseModel';
+import iSQL from '../data-access/sql/interface/SQLInterface';
+import ModelCollection from '../modelling/ModelCollection';
 
 const util = require('util');
 export class ValidationResult {

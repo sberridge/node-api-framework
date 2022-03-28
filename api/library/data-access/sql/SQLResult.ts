@@ -1,4 +1,4 @@
-export class SQLResult {
+export default class SQLResult {
     public success: boolean;
     public error;
     public insert_id: number;

@@ -1,4 +1,4 @@
-import { Config } from "./Config";
+import Config from "./Config";
 import * as crypto from "crypto"
 import * as Rijndael from "rijndael-js";
 

@@ -1,6 +1,6 @@
-import { ModelCollection } from './../../modelling/ModelCollection';
-import { iSQL } from './interface/SQLInterface';
-import { SQLResult } from './SQLResult';
+import ModelCollection from './../../modelling/ModelCollection';
+import iSQL from './interface/SQLInterface';
+import SQLResult from './SQLResult';
 
 
 export class MultiQuery {

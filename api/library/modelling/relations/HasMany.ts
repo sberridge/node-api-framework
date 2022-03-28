@@ -1,12 +1,12 @@
-import {iRelation} from './interface/RelationInterface';
-import {iSQL} from '../../data-access/sql/interface/SQLInterface';
-import {BaseModel} from '../BaseModel';
-import {ModelCollection} from '../ModelCollection';
-import {Query} from './../../data-access/sql/Query';
+import iRelation from './interface/RelationInterface';
+import iSQL from '../../data-access/sql/interface/SQLInterface';
+import BaseModel from '../BaseModel';
+import ModelCollection from '../ModelCollection';
+import Query from './../../data-access/sql/Query';
 import DataAccessFactory from './../../data-access/factory';
 const dataFactory = DataAccessFactory.getInstance();
 
-export class HasMany implements iRelation {
+export default class HasMany implements iRelation {
     private primaryModel: BaseModel;
     private foreignModel: BaseModel;
     private foreignKey: string;
