@@ -268,13 +268,13 @@ export default class PostgresData implements iSQL {
             var valueParts = value.split('.');
             value = valueParts.map(function(value,index) {
                 if(reservedWords.indexOf(value.toLowerCase()) > -1) {
-                    return '"' + value + '"';
+                    return `"${value}"`;
                 }
                 return value;
             }).join('.');
         } else {
             if(reservedWords.indexOf(value.toLowerCase()) > -1) {
-                value = '"' + value + '"';
+                value = `"${value}"`;
             }
         }
         return value;
@@ -350,7 +350,7 @@ export default class PostgresData implements iSQL {
     }
 
     public generateConditional(ifThis:string,thenVal:string,elseVal:string):string {
-        return "CASE WHEN " + ifThis + ' THEN ' + thenVal + ' ELSE ' + elseVal + " END";
+        return `CASE WHEN ${ifThis} THEN ${thenVal} ELSE ${elseVal} END`;
     }
 
     private applyWeightedConditions() {
@@ -364,7 +364,7 @@ export default class PostgresData implements iSQL {
                 this.increaseParamNum(diff);
                 return query;
             });
-            this.selectColumns.push(weightedConditionQueries.join(' + ') + ' __condition_weight__');
+            this.selectColumns.push(`${weightedConditionQueries.join(' + ')} __condition_weight__`);
             this.ordering.unshift({
                 'field': '__condition_weight__',
                 'direction': "desc"
@@ -375,7 +375,7 @@ export default class PostgresData implements iSQL {
 
     private applySubStatement() {
         let startParamNum = this.subStatement.getParamNum();
-        let query = "(" + this.subStatement.generateSelect() + ") " + this.tableAlias + " ";
+        let query = ` (${this.subStatement.generateSelect()}) ${this.tableAlias} `;
         let diff = this.subStatement.getParamNum() - startParamNum;
         this.increaseParamNum(diff);
         return [query, this.subStatement.getParams()];
@@ -599,7 +599,7 @@ export default class PostgresData implements iSQL {
         const columns = Object.keys(this.multiInsertValues[0]).map(this.checkReserved);
         let query = columns.join(",") + ") VALUES ";
         query += this.multiInsertValues.map((insertRow:object)=>{
-            return "(" + Object.values(insertRow).join(",") + ")";
+            return `(${Object.values(insertRow).join(",")})`;
         }).join(',');
         return query;
     }
@@ -607,12 +607,12 @@ export default class PostgresData implements iSQL {
     private generateSingleInsert(): string {
         const columns = Object.keys(this.insertValues).map(this.checkReserved);
         let query = columns.join(",") + ") VALUES ";
-        query += "(" + Object.values(this.insertValues).join(",") + ")";
+        query += `(${Object.values(this.insertValues).join(",")})`;
         return query;
     }
 
     public generateInsert() : string {
-        var query = "INSERT INTO " + this.tableName + " (";
+        var query = `INSERT INTO ${this.tableName} (`;
 
         if(typeof this.multiInsertValues == "undefined") {
             query += this.generateSingleInsert();
@@ -621,7 +621,7 @@ export default class PostgresData implements iSQL {
         }
 
         if(this.incrementingField) {
-            query += " returning " + this.incrementingField;
+            query += ` returning ${this.incrementingField}`;
         }
         return query;
     }
@@ -629,12 +629,12 @@ export default class PostgresData implements iSQL {
     public generateUpdate() : string {
         var query = "UPDATE " + this.tableName + " SET ";
         for(var key in this.updateValues) {
-            query += " " + this.checkReserved(key) + " = " + this.updateValues[key] + ", ";
+            query += ` ${this.checkReserved(key)} = ${this.updateValues[key]}, `;
         }
         query = (query.substring(0,query.length - 2)) + " ";
 
         if(this.query.getWheres().length > 0) {
-            query += " WHERE " + (this.query.applyWheres(this.params,[])) + " ";
+            query += ` WHERE ${(this.query.applyWheres(this.params,[]))} `;
         }
 
         return query;
@@ -662,10 +662,10 @@ export default class PostgresData implements iSQL {
     }
 
     public generateDelete() : string {
-        var query = "DELETE FROM " + this.tableName + " ";
+        var query = `DELETE FROM ${this.tableName} `;
         this.params = [];
         if(this.query.getWheres().length > 0) {
-            query += " WHERE " + (this.query.applyWheres(this.params,[])) + " ";
+            query += ` WHERE ${(this.query.applyWheres(this.params,[]))} `;
         }
         return query;
     }
