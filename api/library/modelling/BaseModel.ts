@@ -57,21 +57,26 @@ export default class BaseModel {
         return this.primaryKey;
     }
 
-    public find(id: any) : Promise<BaseModel> {
-        var da = dataFactory.create(this.sqlConfig);
+    private createDA() {
+        const da = dataFactory.create(this.sqlConfig);
+        da.table(this.tableName);
+        da.cols(this.columns);
+        da.toModel(this.constructor);
         if(this.incrementingField) {
             da.setIncrementingField(this.incrementingField);
         }
-        da.table(this.tableName);
-        da.cols(this.columns);
+        return da;
+    }
+
+    public find(id: any) : Promise<BaseModel> {
+        const da = this.createDA();
         da.where(this.primaryKey,"=",id,true);
-        var self = this;
-        return new Promise(function(resolve,reject) {
-            da.fetch().then(function(result: SQLResult) {
+        return new Promise((resolve,reject) => {
+            da.fetch().then((result: SQLResult) => {
                 if(result.success && result.rows.length > 0) {
-                    self.original = result.rows[0];
-                    self.isNew = false;
-                    resolve(self);
+                    this.original = result.rows[0];
+                    this.isNew = false;
+                    resolve(this);
                 } else {
                     reject(null);
                 }                
@@ -90,13 +95,7 @@ export default class BaseModel {
     }
 
     public all():iSQL {
-        var da = dataFactory.create(this.sqlConfig);
-        if(this.incrementingField) {
-            da.setIncrementingField(this.incrementingField);
-        }
-        da.toModel(this.constructor);
-        da.table(this.tableName);
-        da.cols(this.columns);
+        const da = this.createDA();
         return da;
     }
 
@@ -104,11 +103,10 @@ export default class BaseModel {
         if(columns.indexOf(this.primaryKey) == -1) {
             columns.push(this.primaryKey);
         }
-        var self = this;
         var selectColumns: string[] = [];
         columns.forEach((col)=>{
-            if(Object.keys(self.original).indexOf(col) > -1) {
-                selectColumns.push(self.tableName + "." + col);
+            if(Object.keys(this.original).indexOf(col) > -1) {
+                selectColumns.push(this.tableName + "." + col);
             }
         });
         this.columns = selectColumns;
@@ -200,33 +198,28 @@ export default class BaseModel {
     }
 
     public save(): Promise<boolean> {
-        var self = this;
-        return new Promise(function(resolve,reject) {
-            var da:iSQL = dataFactory.create(self.sqlConfig);
-            if(self.incrementingField) {
-                da.setIncrementingField(self.incrementingField);
-            }
-            da.table(self.tableName);
+        return new Promise((resolve,reject) => {
+            const da = this.createDA();
             var updateObj = {};
-            for(var key in self.changed) {
-                updateObj[key] = self.changed[key];
+            for(var key in this.changed) {
+                updateObj[key] = this.changed[key];
             }
-            if(!self.isNew) {
+            if(!this.isNew) {
                 da.update(updateObj,true);
-                da.where(self.primaryKey,"=",self.original[self.primaryKey],true);
+                da.where(this.primaryKey,"=",this.original[this.primaryKey],true);
             } else {
                 da.insert(updateObj,true);
             }
-            da.save().then(function(result) {
+            da.save().then((result)=>{
                 if(result.rows_affected > 0) {
-                    if(self.isNew) {
+                    if(this.isNew) {
                         if(result.insert_id > 0) {
-                            self.original[self.primaryKey] = result.insert_id;
+                            this.original[this.primaryKey] = result.insert_id;
                         }
-                        self.isNew = false;
+                        this.isNew = false;
                     }
-                    for(var key in self.changed) {
-                        self.original[key] = self.changed[key];
+                    for(var key in this.changed) {
+                        this.original[key] = this.changed[key];
                     }
                 }                
                 resolve(result.rows_affected > 0);
@@ -238,18 +231,13 @@ export default class BaseModel {
     }
 
     public delete(): Promise<boolean> {
-        var self = this;
-        return new Promise(function(resolve,reject) {
-            if(self.isNew) {
+        return new Promise((resolve,reject) => {
+            if(this.isNew) {
                 return reject("record doesn't exist");
             }
-            var da:iSQL = dataFactory.create(self.sqlConfig);
-            if(self.incrementingField) {
-                da.setIncrementingField(self.incrementingField);
-            }
-            da.table(self.tableName);
-            da.where(self.primaryKey,"=",self.original[self.primaryKey],true);
-            da.delete().then(function(result) {           
+            const da = this.createDA();
+            da.where(this.primaryKey,"=",this.original[this.primaryKey],true);
+            da.delete().then((result)=>{           
                 resolve(result.rows_affected > 0);
             }).catch((err)=>{
                 reject(err);

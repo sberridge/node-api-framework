@@ -509,7 +509,6 @@ export default class PostgresData implements iSQL {
                     }
                 })
                 .on("end",async ()=>{
-                    console.log('fin');
                     if(results.length > 0) {
                         await callback(results);
                     }
