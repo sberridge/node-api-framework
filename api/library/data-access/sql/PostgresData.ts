@@ -353,15 +353,13 @@ export default class PostgresData implements iSQL {
         return "CASE WHEN " + ifThis + ' THEN ' + thenVal + ' ELSE ' + elseVal + " END";
     }
 
-    public generateSelect() : string {
-        var params = [];
-        var query = "SELECT ";       
-
+    private applyWeightedConditions() {
+        let newParams = [];
         if(this.weightedConditions.length > 0) {
             var weightedConditionQueries = this.weightedConditions.map((condition:WeightedCondition)=>{
                 condition.increaseParamNum(this.getParamNum() - 1);
                 let startParamNum = condition.getParamNum();
-                let query = condition.applyCondition(this, params, []);
+                let query = condition.applyCondition(this, newParams, []);
                 let diff = condition.getParamNum() - startParamNum;
                 this.increaseParamNum(diff);
                 return query;
@@ -372,41 +370,61 @@ export default class PostgresData implements iSQL {
                 'direction': "desc"
             });
         }
+        return newParams;
+    }
 
-        query += this.selectColumns.join(",");
+    private applySubStatement() {
+        let startParamNum = this.subStatement.getParamNum();
+        let query = "(" + this.subStatement.generateSelect() + ") " + this.tableAlias + " ";
+        let diff = this.subStatement.getParamNum() - startParamNum;
+        this.increaseParamNum(diff);
+        return [query, this.subStatement.getParams()];
+    }
 
-        query += " FROM ";
-
-        if(typeof this.subStatement != "undefined") {
-            let startParamNum = this.subStatement.getParamNum();
-            query += "(" + this.subStatement.generateSelect() + ") " + this.tableAlias + " ";
-            let diff = this.subStatement.getParamNum() - startParamNum;
-            this.increaseParamNum(diff);
-            this.subStatement.getParams().forEach(function(param) {
-                params.push(param);
-            });
-        } else {
-            query += " " + this.tableName + " ";
-        }
-
+    private applyJoins() {
+        let newParams = [];
+        let joinStrings = [];
         this.joins.forEach((join : any)=>{
             let joinDetails = join.func(...join.args);
             joinDetails.params.forEach(function(param) {
-                params.push(param);
+                newParams.push(param);
             });
             joinDetails.query.increaseParamNum(this.getParamNum()-1);
             let startParamNum = joinDetails.query.getParamNum();
-            query += " " + joinDetails.type + " " + " " + joinDetails.table + " ON " + (joinDetails.query.applyWheres(params,[]));
+            joinStrings.push(` ${joinDetails.type}  ${joinDetails.table} ON ${(joinDetails.query.applyWheres(newParams,[]))} `);
             let diff = joinDetails.query.getParamNum() - startParamNum;
             this.increaseParamNum(diff);
         });
+        return [joinStrings.join(" "), newParams];
+    }
+
+    public generateSelect() : string {
+        var params = [];
+        var query = "SELECT ";       
+
+        params.push(...this.applyWeightedConditions())
+
+        query += `${this.selectColumns.join(",")} FROM `;
+
+        if(typeof this.subStatement != "undefined") {
+            let [subQuery, subParams] = this.applySubStatement();
+            query += subQuery;
+            params.push(...subParams)
+        } else {
+            query += ` ${this.tableName} `;
+        }
+
+        const [joinString, joinParams] = this.applyJoins();
+        query += joinString;
+        params.push(...joinParams);
+        
         if(this.query.getWheres().length > 0) {
-            query += " WHERE " + (this.query.applyWheres(params,[])) + " ";
+            query += ` WHERE ${(this.query.applyWheres(params,[]))} `;
         }                
         this.params = params;
 
         if(typeof this.groupFields != "undefined" && this.groupFields.length > 0) {
-            query += " GROUP BY " + this.groupFields.join(",");
+            query += ` GROUP BY ${this.groupFields.join(",")} `;
         }
 
         if(this.ordering.length > 0) {
@@ -418,13 +436,13 @@ export default class PostgresData implements iSQL {
         }        
 
         if(typeof this.limitAmount != "undefined") {
-            query += " LIMIT " + this.limitAmount + " ";
+            query += ` LIMIT ${this.limitAmount} `;
         }
 
         if(typeof this.offsetAmount != "undefined") {
-            query += " OFFSET " + this.offsetAmount + " ";
+            query += ` OFFSET ${this.offsetAmount} `;
         }
-
+        
         return query;
     }
 
