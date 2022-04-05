@@ -175,7 +175,7 @@ export default class MySQLData implements iSQL {
         
     }
 
-    public toModel(model: any) : MySQLData {
+    public toModel(model: new (...args: any[]) => BaseModel) : MySQLData {
         this.modelFunc = model;
         return this;
     }
