@@ -45,8 +45,25 @@ describe("MySQLData Tests", ()=>{
         db.cols(["id","name","table"]);
         db.addCol("table.join additional_field");
         db.addCol("table.field2");
-        console.log(db["additionalColumns"], db["selectColumns"]);
-    })
+
+        const expectedCols = [
+            "id",
+            "name",
+            "`table`",
+            "`table`.`join` additional_field",
+            "`table`.field2"
+        ];
+        const expectedAdditional = [
+            "additional_field",
+            "field2"
+        ];
+        (db["selectColumns"] as string[]).forEach((col,i)=>{
+            expect(col).toEqual(expectedCols[i]);
+        });
+        (db["additionalColumns"] as string[]).forEach((col,i)=>{
+            expect(col).toEqual(expectedAdditional[i]);
+        });
+    });
 
 
 
@@ -56,5 +73,10 @@ describe("MySQLData Tests", ()=>{
         const query = db.generateSelect();
         expect(query).toMatch(/SELECT \* FROM  users/);
     });
+
+    it('should generate a query to check if a table exists',()=>{
+        const query:MySQLData = db["generateDoesTableExistQuery"]("table");
+        expect(query.generateSelect()).toMatch(/SELECT +COUNT\(\*\) +num FROM +information_schema.TABLES +WHERE +TABLE_SCHEMA += +\? +AND +TABLE_NAME += +\? +/);
+    })
 })
 

@@ -71,30 +71,39 @@ export default class MySQLData implements iSQL {
         
     }
 
+    private generateDoesTableExistQuery(table:string): MySQLData {
+        var db = new MySQLData(this.usedConfig);
+        db.table("information_schema.TABLES");
+        db.cols(['COUNT(*) num']);
+        db.where("TABLE_SCHEMA","=",this.usedConfig['database'],true);
+        db.where("TABLE_NAME","=",table,true);
+        return db;
+    }
+
     public async doesTableExist(table:string):Promise<boolean> {
         return new Promise((resolve,reject)=> {
-            var db = new MySQLData(this.usedConfig);
-            db.table("information_schema.TABLES");
-            db.cols(['COUNT(*) num']);
-            db.where("TABLE_SCHEMA","=",this.usedConfig['database'],true);
-            db.where("TABLE_NAME","=",table,true);
+            const db = this.generateDoesTableExistQuery(table);
             db.fetch().then((res)=>{
                 resolve(res.rows[0]['num'] > 0);
             }).catch((e)=>{
                 reject(e);
             });
         });
-
     }
-    public async doesColumnExist(table:string,column:string):Promise<boolean> {
-        return new Promise((resolve,reject)=>{
-            var db = new MySQLData(this.usedConfig);
-            db.table("information_schema.COLUMNS");
-            db.cols(['COUNT(*) num']);
-            db.where("TABLE_SCHEMA","=",this.usedConfig['database'],true);
-            db.where("TABLE_NAME","=",table,true);
-            db.where("COLUMN_NAME","=",column,true);
 
+    private generateDoesColumnExistQuery(table:string,column:string): MySQLData {
+        var db = new MySQLData(this.usedConfig);
+        db.table("information_schema.COLUMNS");
+        db.cols(['COUNT(*) num']);
+        db.where("TABLE_SCHEMA","=",this.usedConfig['database'],true);
+        db.where("TABLE_NAME","=",table,true);
+        db.where("COLUMN_NAME","=",column,true);
+        return db;
+    }
+
+    public async doesColumnExist(table:string,column:string):Promise<boolean> {
+        return new Promise((resolve,reject)=>{            
+            const db = this.generateDoesColumnExistQuery(table, column);
             db.fetch().then((res)=>{
                 resolve(res.rows[0]['num'] > 0);
             }).catch((e)=>{
@@ -104,13 +113,18 @@ export default class MySQLData implements iSQL {
 
     }
 
+    private generateDoesTriggerExistQuery(triggerName:string): MySQLData {
+        var db = new MySQLData(this.usedConfig);
+        db.table("information_schema.TRIGGERS");
+        db.cols(['COUNT(*) num']);
+        db.where("TRIGGER_SCHEMA","=",this.usedConfig['database'],true);
+        db.where("TRIGGER_NAME","=",triggerName,true);
+        return db;
+    }
+
     public async doesTriggerExist(triggerName:string):Promise<boolean> {
         return new Promise((resolve,reject)=>{
-            var db = new MySQLData(this.usedConfig);
-            db.table("information_schema.TRIGGERS");
-            db.cols(['COUNT(*) num']);
-            db.where("TRIGGER_SCHEMA","=",this.usedConfig['database'],true);
-            db.where("TRIGGER_NAME","=",triggerName,true);
+            const db = this.generateDoesTriggerExistQuery(triggerName);
             db.fetch().then((res)=>{
                 resolve(res[0]['num'] > 0);
             }).catch((e)=>{
@@ -118,14 +132,19 @@ export default class MySQLData implements iSQL {
             });
         });
     }
+
+    private generateDoesStoredProcedureExistQuery(procedureName:string):MySQLData {
+        var db = new MySQLData(this.usedConfig);
+        db.table("information_schema.ROUTINES");
+        db.cols(['COUNT(*) num']);
+        db.where("ROUTINE_SCHEMA","=",this.usedConfig['database'],true);
+        db.where("ROUTINE_NAME","=",procedureName,true);
+        return db;
+    }
     
     public async doesStoredProcedureExist(procedureName:string):Promise<boolean> {
         return new Promise((resolve,reject)=>{
-            var db = new MySQLData(this.usedConfig);
-            db.table("information_schema.ROUTINES");
-            db.cols(['COUNT(*) num']);
-            db.where("ROUTINE_SCHEMA","=",this.usedConfig['database'],true);
-            db.where("ROUTINE_NAME","=",procedureName,true);
+            const db = this.generateDoesStoredProcedureExistQuery(procedureName);
             db.fetch().then((res)=>{
                 resolve(res[0]['num'] > 0);
             }).catch((e)=>{
@@ -213,7 +232,7 @@ export default class MySQLData implements iSQL {
     }
 
     public cols(selectColumns : string[]) : MySQLData {
-        this.selectColumns = selectColumns.map(this.checkReserved);       
+        this.selectColumns = selectColumns.map((col)=>{return this.checkReserved.call(this,col)});       
         return this;
     }
 
@@ -258,18 +277,23 @@ export default class MySQLData implements iSQL {
             'read',
             'check'
         ];
+        let alias:string|null = null;
+        if(value.includes(" ")) {
+            console.log(value,this);
+            let valueAndAlias = value.split(" ");
+            alias = this.checkReserved.call(this,valueAndAlias[1]);
+            value = valueAndAlias[0];
+        }
         if(value.indexOf('.') > -1) {
             var valueParts = value.split('.');
-            value = valueParts.map(function(value,index) {
-                if(reservedWords.indexOf(value.toLowerCase()) > -1) {
-                    return '`' + value + '`';
-                }
-                return value;
-            }).join('.');
+            value = valueParts.map((val)=>{return this.checkReserved.call(this,val)}).join('.');
         } else {
             if(reservedWords.indexOf(value.toLowerCase()) > -1) {
                 value = '`' + value + '`';
             }
+        }
+        if(alias) {
+            value += ` ${alias}`;
         }
         return value;
     }
