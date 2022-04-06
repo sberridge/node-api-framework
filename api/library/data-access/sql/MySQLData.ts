@@ -279,7 +279,6 @@ export default class MySQLData implements iSQL {
         ];
         let alias:string|null = null;
         if(value.includes(" ")) {
-            console.log(value,this);
             let valueAndAlias = value.split(" ");
             alias = this.checkReserved.call(this,valueAndAlias[1]);
             value = valueAndAlias[0];
