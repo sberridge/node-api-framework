@@ -11,39 +11,41 @@ import ConnectionConfig from "./interface/SQLConnectionConfig";
 
 
 export default class MSSQLData implements iSQL {
-    private tableName : string;
-    private selectColumns : string[];
+    private tableName? : string;
+    private selectColumns : string[] = [];
     private additionalColumns: string[] = [];
-    private subStatement : MSSQLData;
-    private tableAlias : string;
+    private subStatement? : MSSQLData;
+    private tableAlias? : string;
     private weightedConditions:WeightedCondition[] = [];
     private joins: object[] = [];
     private static pools : Map<string, mssql.ConnectionPool> = new Map;
-    private pool: mssql.ConnectionPool;
-    private params : any[];
-    private paramNames : any[];
+    private pool: mssql.ConnectionPool | undefined;
+    private params : any[] = [];
+    private paramNames : string[] = [];
     private paramPrefix : string = "param";
-    private insertValues : object;
-    private multiInsertValues : object[];
-    private updateValues : object;
-    private offsetAmount : number;
-    private limitAmount : number;
+    private insertValues? : {[key:string]:any};
+    private multiInsertValues? : {[key:string]:any}[];
+    private updateValues? : {[key:string]:any};
+    private offsetAmount? : number;
+    private limitAmount? : number;
     private query = new Query(true);
-    private usedConfig : ConnectionConfig;
-    private modelFunc: new (...args: any[]) => BaseModel;
+    private usedConfig? : ConnectionConfig;
+    private modelFunc?: new (...args: any[]) => BaseModel;
     private ordering: SQLOrder[] = [];
-    private groupFields: string[];
+    private groupFields?: string[];
 
-    constructor(connectionConfig : ConnectionConfig = null) {
+    constructor(connectionConfig : ConnectionConfig | null = null) {
         this.query.increaseParamNum(1);
         if(connectionConfig !== null) {
-            this.usedConfig = connectionConfig;   
-            
+            this.usedConfig = connectionConfig;               
         }
         
     }
 
     private async connect():Promise<boolean> {
+        if(!this.usedConfig || !this.usedConfig.name) {
+            return false;
+        }
         if(!MSSQLData.pools.has(this.usedConfig.name)) {
             var config:mssql.config = {
                 server: this.usedConfig.host,
@@ -70,7 +72,11 @@ export default class MSSQLData implements iSQL {
     public closePool(key:string):Promise<void> {
         return new Promise((resolve,reject)=>{
             if(MSSQLData.pools.has(key)) {
-                MSSQLData.pools.get(key).close(function(err) {
+                const connection = MSSQLData.pools.get(key);
+                if(!connection) {
+                    return resolve();
+                }
+                connection.close(function(err) {
                     MSSQLData.pools.delete(key);
                     resolve();
                 });
@@ -100,13 +106,20 @@ export default class MSSQLData implements iSQL {
 
     public async doesTableExist(table:string):Promise<boolean> {
         return new Promise((resolve,reject)=>{
+            if(!this.usedConfig) {
+                return resolve(false);
+            }
             var db = new MSSQLData(this.usedConfig);
             db.table("information_schema.TABLES");
             db.cols(['COUNT(*) num']);
             db.where("TABLE_CATALOG","=",this.usedConfig['database'],true);
             db.where("TABLE_NAME","=",table,true);
             db.fetch().then((res)=>{
-                resolve(res.rows[0]['num'] > 0);
+                if(res.rows.length > 0) {
+                    const result= res.rows[0] as {num:number};
+                    return resolve(result.num > 0);
+                }
+                resolve(false);
             }).catch((e)=>{
                 reject(e);
             });
@@ -114,6 +127,9 @@ export default class MSSQLData implements iSQL {
     }
     public async doesColumnExist(table:string,column:string):Promise<boolean> {
         return new Promise((resolve,reject)=>{
+            if(!this.usedConfig) {
+                return resolve(false);
+            }
             var db = new MSSQLData(this.usedConfig);
             db.table("information_schema.COLUMNS");
             db.cols(['COUNT(*) num']);
@@ -121,7 +137,11 @@ export default class MSSQLData implements iSQL {
             db.where("TABLE_NAME","=",table,true);
             db.where("COLUMN_NAME","=",column,true);
             db.fetch().then((res)=>{
-                resolve(res.rows[0]['num'] > 0);
+                if(res.rows.length > 0) {
+                    const result= res.rows[0] as {num:number};
+                    return resolve(result.num > 0);
+                }
+                resolve(false);
             }).catch(e=>{
                 reject(e);
             });
@@ -136,7 +156,11 @@ export default class MSSQLData implements iSQL {
             db.cols(['COUNT(*) num']);
             db.where("name","=",triggerName,true);
             db.fetch().then((res)=>{
-                resolve(res.rows[0]['num'] > 0);
+                if(res.rows.length > 0) {
+                    const result= res.rows[0] as {num:number};
+                    return resolve(result.num > 0);
+                }
+                resolve(false);
             }).catch((e)=>{
                 reject(e);
             });
@@ -145,13 +169,20 @@ export default class MSSQLData implements iSQL {
 
     public async doesStoredProcedureExist(procedureName:string):Promise<boolean> {
         return new Promise((resolve,reject)=>{
+            if(!this.usedConfig) {
+                return resolve(false);
+            }
             var db = new MSSQLData(this.usedConfig);
             db.table("information_schema.ROUTINES");
             db.cols(['COUNT(*) num']);
             db.where("ROUTINE_CATALOG","=",this.usedConfig['database'],true);
             db.where("ROUTINE_NAME","=",procedureName,true);
             db.fetch().then((res)=>{
-                resolve(res.rows[0]['num'] > 0);
+                if(res.rows.length > 0) {
+                    const result= res.rows[0] as {num:number};
+                    return resolve(result.num > 0);
+                }
+                resolve(false);
             }).catch((e)=>{
                 reject(e);
             });
@@ -161,7 +192,11 @@ export default class MSSQLData implements iSQL {
     public checkConnection():Promise<boolean> {
         return new Promise(async (resolve,reject)=>{
             let connected = await this.connect();
-            resolve(connected && this.pool.connected);
+            const pool = this.pool;
+            if(!pool) {
+                return resolve(false)
+            }
+            resolve(connected && pool.connected);
         });
     }
 
@@ -190,10 +225,10 @@ export default class MSSQLData implements iSQL {
     public table(tableName : MSSQLData, tableAlias : string) : MSSQLData
     public table(tableName : string) : MSSQLData
     public table(tableName : MSSQLData | string, tableAlias? : string) : MSSQLData {
-        if(typeof tableName == "object") {
+        if(tableName instanceof MSSQLData && tableAlias) {
             this.subStatement = tableName
             this.tableAlias = this.checkReserved(tableAlias);
-        } else {
+        } else if(typeof tableName == "string") {
             this.tableName = this.checkReserved(tableName);
         }            
         return this;
@@ -357,8 +392,8 @@ export default class MSSQLData implements iSQL {
     }
 
     public generateSelect() : string {
-        var params = [];
-        var paramNames = [];
+        var params:any[] = [];
+        var paramNames:string[] = [];
         var query = "SELECT ";
 
         if(this.weightedConditions.length > 0) {
@@ -397,10 +432,10 @@ export default class MSSQLData implements iSQL {
 
         this.joins.forEach((join : any)=>{
             let joinDetails = join.func(...join.args);
-            joinDetails.params.forEach(function(param) {
+            joinDetails.params.forEach(function(param:any) {
                 params.push(param);
             });
-            joinDetails.paramNames.forEach(function(paramName) {
+            joinDetails.paramNames.forEach(function(paramName:string) {
                 paramNames.push(paramName);
             });
             joinDetails.query.increaseParamNum(this.getParamNum()-1);
@@ -448,7 +483,10 @@ export default class MSSQLData implements iSQL {
         });            
     }
 
-    private resultToModel(result:object):BaseModel {
+    private resultToModel(result:{[key:string]:any}):BaseModel | null {
+        if(!this.modelFunc || !this.usedConfig || !this.usedConfig?.name) {
+            return null;
+        }
         var model:BaseModel = new this.modelFunc();
         if(!model.getSqlConfig()) {
             model.setSqlConfig(this.usedConfig["name"]);
@@ -469,7 +507,9 @@ export default class MSSQLData implements iSQL {
                 var modelCollection = new ModelCollection;
                 results.rows.forEach((result)=>{
                     let model = this.resultToModel(result);
-                    modelCollection.add(model);
+                    if(model) {
+                        modelCollection.add(model);
+                    }                    
                 });
                 resolve(modelCollection);
             }).catch(err=>{
@@ -483,9 +523,10 @@ export default class MSSQLData implements iSQL {
             this.stream(num, async (results) => {
                 var modelCollection = new ModelCollection;
                 results.forEach((result)=>{
-                    var model = new this.modelFunc();
-                    model.loadData(result);
-                    modelCollection.add(model);
+                    var model = this.resultToModel(result);
+                    if(model) {
+                        modelCollection.add(model);
+                    }                    
                 });
                 return await callback(modelCollection);
             }).then(()=>{
@@ -501,12 +542,14 @@ export default class MSSQLData implements iSQL {
         return new Promise(async (resolve,reject) => {
             await this.connect();
 
-            var results = [];
-
+            var results:any[] = [];
+            if(!this.pool) {
+                return reject();
+            }
             var request = this.pool.request();
             request.stream = true;
             var query = this.generateSelect();
-            var data = {};
+            var data:{[key:string]:any} = {};
             this.params.forEach((val,i)=>{
                 switch(typeof val) {
                     case "number":
@@ -549,11 +592,11 @@ export default class MSSQLData implements iSQL {
         
     }
 
-    private multiInsert(columnValues: object[], escape: boolean) {
-        var params = [];
-        var paramNames = [];
-        var multiInsertValues = [];
-        columnValues.forEach((insertRecord:object)=>{
+    private multiInsert(columnValues: {[key:string]:any}[], escape: boolean) {
+        var params:any[] = [];
+        var paramNames:string[] = [];
+        var multiInsertValues:any[] = [];
+        columnValues.forEach((insertRecord:{[key:string]:any})=>{
             if(escape) {
                 for(var key in insertRecord) {
                     var num = params.push(insertRecord[key]);
@@ -569,7 +612,7 @@ export default class MSSQLData implements iSQL {
         this.paramNames = paramNames;
     }
 
-    private singleInsert(columnValues: object, escape: boolean) {
+    private singleInsert(columnValues: {[key:string]:any}, escape: boolean) {
         var params = [];
         var paramNames = [];
         if(escape) {
@@ -585,9 +628,9 @@ export default class MSSQLData implements iSQL {
         this.paramNames = paramNames;
     }
 
-    public insert(columnValues : object[], escape : boolean) : MSSQLData
-    public insert(columnValues : object, escape : boolean) : MSSQLData
-    public insert(columnValues : object[] | object, escape : boolean = true) : MSSQLData {            
+    public insert(columnValues : {[key:string]:any}[], escape : boolean) : MSSQLData
+    public insert(columnValues : {[key:string]:any}, escape : boolean) : MSSQLData
+    public insert(columnValues : {[key:string]:any}[] | {[key:string]:any}, escape : boolean = true) : MSSQLData {            
         
         if(Array.isArray(columnValues)) {
             this.multiInsert(columnValues, escape);            
@@ -598,7 +641,7 @@ export default class MSSQLData implements iSQL {
         return this;
     }
     
-    public update(columnValues : object, escape : boolean = true) : MSSQLData {
+    public update(columnValues : {[key:string]:any}, escape : boolean = true) : MSSQLData {
         var params = [];
         var paramNames = [];
         if(escape) {
@@ -616,6 +659,9 @@ export default class MSSQLData implements iSQL {
     }
 
     private generateMultiInsert() {
+        if(!this.multiInsertValues) {
+            return "";
+        }
         var columns = Object.keys(this.multiInsertValues[0]).map(this.checkReserved);
         var insert = columns.join(",") + ") VALUES";
         insert += this.multiInsertValues.map((insertRow:object)=>{
@@ -625,6 +671,9 @@ export default class MSSQLData implements iSQL {
     }
 
     private generateSingleInsert() {
+        if(!this.insertValues) {
+            return "";
+        }
         var columns = Object.keys(this.insertValues).map(this.checkReserved);
         var insert = columns.join(",") + ") VALUES";
         insert +=  "(" + Object.values(this.insertValues).join(",") + "); SELECT IDENT_CURRENT('" + this.tableName + "') AS last_insert_id;";
@@ -701,6 +750,9 @@ export default class MSSQLData implements iSQL {
     public execute(query : string): Promise<SQLResult> {
         return new Promise(async (resolve,reject)=>{
             await this.connect();
+            if(!this.pool) {
+                return reject();
+            }
             var request = this.pool.request();
             this.params.forEach((val,i)=>{
                 switch(typeof val) {
@@ -750,14 +802,14 @@ export default class MSSQLData implements iSQL {
         return this;
     }
 
-    private addJoin(type: string, table : string | MSSQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null):void {
+    private addJoin(type: string, table : string | MSSQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) | undefined = undefined, arg4 : string | undefined = undefined):void {
         this.joins.push({
-            func: (type: string, table : string | MSSQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null) => {
+            func: (type: string, table : string | MSSQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) | undefined = undefined, arg4 : string | undefined = undefined) => {
                 var tableName = "";
-                var primaryKey: string | ((q:Query)=>Query);
-                var foreignKey: string;
-                var params = [];
-                var paramNames = [];
+                var primaryKey: string | ((q:Query)=>Query) | undefined;
+                var foreignKey: string | undefined;
+                var params:any[] = [];
+                var paramNames:string[] = [];
                 if(typeof table == "string") {
                     tableName = table;
                     primaryKey = arg2;
@@ -775,9 +827,9 @@ export default class MSSQLData implements iSQL {
                 }
                 var query = new Query(true);
                 query.increaseParamNum(1);
-                if(typeof primaryKey != "string") {
+                if(primaryKey && typeof primaryKey != "string") {
                     primaryKey(query);
-                } else {
+                } else if(typeof primaryKey == "string") {
                     query.on(primaryKey,"=",foreignKey);                    
                 }
                 return {
@@ -802,7 +854,7 @@ export default class MSSQLData implements iSQL {
     public join(tableName : MSSQLData, tableAlias : string, primaryKey : string, foreignKey : string) : MSSQLData
     public join(tableName : string, queryFunc : (q: Query) => Query) : MSSQLData
     public join(tableName : string, primaryKey : string, foreignKey : string) : MSSQLData
-    public join(table : string | MSSQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null) : MSSQLData {       
+    public join(table : string | MSSQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) | undefined = undefined, arg4 : string | undefined = undefined) : MSSQLData {       
         this.addJoin("JOIN", table, arg2, arg3, arg4)
         return this;
     }
@@ -811,7 +863,7 @@ export default class MSSQLData implements iSQL {
     public leftJoin(tableName : MSSQLData, tableAlias : string, primaryKey : string, foreignKey : string) : MSSQLData
     public leftJoin(tableName : string, queryFunc : (q: Query) => Query) : MSSQLData
     public leftJoin(tableName : string, primaryKey : string, foreignKey : string) : MSSQLData
-    public leftJoin(table : string | MSSQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null) : MSSQLData {
+    public leftJoin(table : string | MSSQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) | undefined = undefined, arg4 : string | undefined = undefined) : MSSQLData {
         this.addJoin("LEFT JOIN", table, arg2, arg3, arg4)        
         return this;
     }
@@ -822,8 +874,11 @@ export default class MSSQLData implements iSQL {
         sql.cols(["COUNT(*) num"]);
         return new Promise((resolve,reject) => {
             sql.fetch().then((result) => {
-                var num = result.rows[0]['num'];
-                resolve(num);
+                if(result.rows.length > 0) {
+                    const res = result.rows[0] as {num:number};
+                    return resolve(res.num);
+                }
+                resolve(0);
             }).catch(err=>{
                 reject(err);
             });

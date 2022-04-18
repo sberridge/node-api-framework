@@ -3,7 +3,7 @@ import * as randomString from 'crypto-random-string';
 import * as crypto from 'crypto';
 export class JWT {
     private key: string
-    private static instance:JWT = null;
+    private static instance:JWT | null = null;
     private constructor() {
         this.key= randomString({length:30,characters:"1234567890qwertyuiopasdfghjklzxcvbnm!$%#-="});
     }
@@ -22,19 +22,21 @@ export class JWT {
         return string.replace(/\-/g,'+').replace(/\_/,'/').padEnd(14,"=");
     }
 
-    public sign(payload,req:Request): boolean {
+    public sign(payload:any,req:Request): boolean {
         var header = this.base64URL(Buffer.from(JSON.stringify({
             alg: "HS256",
             typ: "JWT"
         })).toString("base64"));
         payload = this.base64URL(Buffer.from(JSON.stringify(payload)).toString("base64"));
         var signature = this.base64URL(crypto.createHmac('sha256',this.key).update(header + "." + payload).digest('base64'));
-        
-        req['session'].jwt = header + '.' + payload + '.' + signature;
+        if(req['session']) {
+            req['session'].jwt = header + '.' + payload + '.' + signature;
+        }        
         return true;
     }
 
-    public verify(req:Request): object {
+    public verify(req:Request): any {
+        if(!req['session']) return null;
         if("jwt" in req['session']) {
             var jwtParts = req['session'].jwt.split(".");
             if(jwtParts.length != 3) {

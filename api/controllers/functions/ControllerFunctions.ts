@@ -2,7 +2,7 @@ import { pagination as paginationResult } from "./../../library/data-access/sql/
 import { paginationURLQuery } from "../types/ControllerTypes";
 import iSQL from "./../../library/data-access/sql/interface/SQLInterface";
 
-export const applyQueryPagination = async (query: iSQL, paginationParams: paginationURLQuery):Promise<{success: boolean, result: paginationResult}> => {
+export const applyQueryPagination = async (query: iSQL, paginationParams: paginationURLQuery):Promise<{success: boolean, result: paginationResult | null}> => {
     const pageNumber = ("page_number" in paginationParams) && !isNaN(parseInt(paginationParams.page_number)) ? parseInt(paginationParams.page_number) : 1;
     const perPage = ("per_page" in paginationParams) && !isNaN(parseInt(paginationParams.per_page)) ? parseInt(paginationParams.per_page) : 10;
     const paginationResult = await query.paginate(perPage, pageNumber)

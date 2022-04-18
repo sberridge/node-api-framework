@@ -11,31 +11,34 @@ import ConnectionConfig from './interface/SQLConnectionConfig';
 
 
 export default class MySQLData implements iSQL {
-    private tableName : string;
-    private selectColumns : string[];
+    private tableName? : string;
+    private selectColumns : string[] = [];
     private additionalColumns: string[] = [];
-    private subStatement : MySQLData;
-    private tableAlias : string;
+    private subStatement? : MySQLData;
+    private tableAlias? : string;
     private weightedConditions:WeightedCondition[] = [];
     private joins: object[] = [];
     private static pools : Map<string, mysql.Pool> = new Map;
-    private params : any[];
-    private insertValues : object;
-    private multiInsertValues : object[];
-    private updateValues : object;
-    private offsetAmount : number;
-    private limitAmount : number;
+    private params : any[] = [];
+    private insertValues? : {[key:string]:any};
+    private multiInsertValues? : {[key:string]:any}[];
+    private updateValues? : {[key:string]:any};
+    private offsetAmount? : number;
+    private limitAmount? : number;
     private query = new Query(false);
     private usedConfig : ConnectionConfig;
-    private modelFunc: new (...args: any[]) => BaseModel;
+    private modelFunc?: new (...args: any[]) => BaseModel;
     private ordering: SQLOrder[] = [];
-    private groupFields: string[];
+    private groupFields?: string[];
 
     constructor(connectionConfig : ConnectionConfig) {
         this.usedConfig = connectionConfig;      
     }
 
-    private connect(): mysql.Pool {
+    private connect(): mysql.Pool | undefined {
+        if(!this.usedConfig.name) {
+            return undefined;
+        }
         if(!MySQLData.pools.has(this.usedConfig.name)) {
             let config:mysql.PoolConfig = {
                 connectionLimit: 100,
@@ -47,10 +50,9 @@ export default class MySQLData implements iSQL {
             if("port" in this.usedConfig) {
                 config.port = this.usedConfig.port;
             }
-            MySQLData.pools.set(this.usedConfig['name'], mysql.createPool(config));
+            MySQLData.pools.set(this.usedConfig.name, mysql.createPool(config));
         }
-        
-        return MySQLData.pools.get(this.usedConfig['name']);
+        return MySQLData.pools.get(this.usedConfig.name);
     }
 
     public newQuery():MySQLData {
@@ -59,7 +61,11 @@ export default class MySQLData implements iSQL {
 
     public checkConnection():Promise<boolean> {
         return new Promise((resolve,reject)=>{
-            this.connect().getConnection((err,connection)=>{
+            const connection = this.connect();
+            if(!connection) {
+                return reject();
+            }
+            connection.getConnection((err,connection)=>{
                 if(err) {
                     reject(err);
                 } else {
@@ -84,7 +90,11 @@ export default class MySQLData implements iSQL {
         return new Promise((resolve,reject)=> {
             const db = this.generateDoesTableExistQuery(table);
             db.fetch().then((res)=>{
-                resolve(res.rows[0]['num'] > 0);
+                if(res.rows.length > 0) {
+                    const result = res.rows[0] as {"num":number};
+                    return resolve(result.num > 0);
+                }
+                resolve(false);
             }).catch((e)=>{
                 reject(e);
             });
@@ -105,7 +115,11 @@ export default class MySQLData implements iSQL {
         return new Promise((resolve,reject)=>{            
             const db = this.generateDoesColumnExistQuery(table, column);
             db.fetch().then((res)=>{
-                resolve(res.rows[0]['num'] > 0);
+                if(res.rows.length > 0) {
+                    const result = res.rows[0] as {"num":number};
+                    return resolve(result.num > 0);
+                }
+                resolve(false);
             }).catch((e)=>{
                 reject(e);
             });
@@ -126,7 +140,11 @@ export default class MySQLData implements iSQL {
         return new Promise((resolve,reject)=>{
             const db = this.generateDoesTriggerExistQuery(triggerName);
             db.fetch().then((res)=>{
-                resolve(res[0]['num'] > 0);
+                if(res.rows.length > 0) {
+                    const result = res.rows[0] as {"num":number};
+                    return resolve(result.num > 0);
+                }
+                return resolve(false);
             }).catch((e)=>{
                 reject(e);
             });
@@ -146,7 +164,11 @@ export default class MySQLData implements iSQL {
         return new Promise((resolve,reject)=>{
             const db = this.generateDoesStoredProcedureExistQuery(procedureName);
             db.fetch().then((res)=>{
-                resolve(res[0]['num'] > 0);
+                if(res.rows.length > 0) {
+                    const result = res.rows[0] as {"num":number};
+                    return resolve(result.num > 0);
+                }
+                return resolve(false);
             }).catch((e)=>{
                 reject(e);
             });
@@ -170,14 +192,15 @@ export default class MySQLData implements iSQL {
 
     public closePool(key:string):Promise<void> {
         return new Promise((resolve,reject)=>{
-            if(MySQLData.pools.has(key)) {
-                MySQLData.pools.get(key).end(function(err) {
+            const connection = MySQLData.pools.get(key);
+            if(connection) {
+                connection.end((err)=>{
                     MySQLData.pools.delete(key);
                     resolve();
-                });
+                })
             } else {
                 resolve();
-            }            
+            }
         });        
     }
 
@@ -203,10 +226,10 @@ export default class MySQLData implements iSQL {
     public table(tableName : MySQLData, tableAlias : string) : MySQLData
     public table(tableName : string) : MySQLData
     public table(tableName : string | MySQLData, tableAlias? : string) : MySQLData {
-        if(typeof tableName == "object") {
+        if(tableName instanceof MySQLData && tableAlias) {
             this.subStatement = tableName
             this.tableAlias = this.checkReserved(tableAlias);
-        } else {
+        } else if(typeof tableName == "string") {
             this.tableName = this.checkReserved(tableName);
         }            
         return this;
@@ -366,7 +389,7 @@ export default class MySQLData implements iSQL {
     }
 
     public generateSelect() : string {
-        var params = [];
+        var params:any[] = [];
         var query = "SELECT ";       
 
         if(this.weightedConditions.length > 0) {
@@ -394,7 +417,7 @@ export default class MySQLData implements iSQL {
         }
 
         this.joins.forEach(function(join : any) {
-            join.params.forEach(function(param) {
+            join.params.forEach((param:any)=>{
                 params.push(param);
             });
             query += " " + join.type + " " + " " + join.table + " ON " + (join.query.applyWheres(params,[]));
@@ -437,9 +460,12 @@ export default class MySQLData implements iSQL {
         });            
     }
 
-    private resultToModel(result:object):BaseModel {
+    private resultToModel(result:{[key:string]:any}):BaseModel | null {
+        if(!this.modelFunc) {
+            return null;
+        }
         var model:BaseModel = new this.modelFunc();
-        if(!model.getSqlConfig()) {
+        if(!model.getSqlConfig() && this.usedConfig.name) {
             model.setSqlConfig(this.usedConfig["name"]);
         }
         this.additionalColumns.forEach((field)=>{
@@ -457,8 +483,10 @@ export default class MySQLData implements iSQL {
             this.execute(this.generateSelect()).then((results: SQLResult)=>{
                 var modelCollection = new ModelCollection;
                 results.rows.forEach((result)=>{
-                    let model:BaseModel = this.resultToModel(result);
-                    modelCollection.add(model);
+                    let model = this.resultToModel(result);
+                    if(model) {
+                        modelCollection.add(model);
+                    }                    
                 });
                 resolve(modelCollection);
             }).catch(err=>{
@@ -473,7 +501,9 @@ export default class MySQLData implements iSQL {
                 var modelCollection = new ModelCollection;
                 results.forEach((result)=>{
                     var model = this.resultToModel(result);
-                    modelCollection.add(model);
+                    if(model) {
+                        modelCollection.add(model);
+                    }                    
                 });
                 return await callback(modelCollection);
             }).then(()=>{
@@ -487,8 +517,12 @@ export default class MySQLData implements iSQL {
 
     public stream(num : number, callback : (results:any[])=>Promise<boolean>): Promise<void> {
         return new Promise((resolve,reject) => {
-            this.connect().getConnection((err,connection) => {
-                var results = [];
+            let connection = this.connect();
+            if(!connection) {
+                return reject();
+            }
+            connection.getConnection((err,connection) => {
+                var results:any[] = [];
                 connection.query(this.generateSelect(),this.params)
                     .on('error',function(err) {
                         reject(err);
@@ -519,10 +553,10 @@ export default class MySQLData implements iSQL {
         });
         
     }
-    private multiInsert(columnValues: object[], escape: boolean) {
-        var params = [];
-        var multiInsertValues = [];
-        columnValues.forEach((insertRecord:object)=>{
+    private multiInsert(columnValues: {[key:string]:any}[], escape: boolean) {
+        var params:any[] = [];
+        var multiInsertValues:any[] = [];
+        columnValues.forEach((insertRecord:{[key:string]:any})=>{
             if(escape) {
                 for(var key in insertRecord) {
                     params.push(insertRecord[key]);
@@ -534,7 +568,7 @@ export default class MySQLData implements iSQL {
         this.multiInsertValues = multiInsertValues;
         this.params = params;
     }
-    private singleInsert(columnValues:object, escape: boolean) {
+    private singleInsert(columnValues:{[key:string]:any}, escape: boolean) {
         var params = [];
         if(escape) {
             for(var key in columnValues) {
@@ -545,9 +579,9 @@ export default class MySQLData implements iSQL {
         this.params = params;
         this.insertValues = columnValues;
     }
-    public insert(columnValues : object[], escape : boolean) : MySQLData
-    public insert(columnValues : object, escape : boolean) : MySQLData
-    public insert(columnValues : object[] | object, escape : boolean = true) : MySQLData {            
+    public insert(columnValues : {[key:string]:any}[], escape : boolean) : MySQLData
+    public insert(columnValues : {[key:string]:any}, escape : boolean) : MySQLData
+    public insert(columnValues : {[key:string]:any}[] | {[key:string]:any}, escape : boolean = true) : MySQLData {            
         
         if(Array.isArray(columnValues)) {
             this.multiInsert(columnValues, escape);
@@ -558,7 +592,7 @@ export default class MySQLData implements iSQL {
         return this;
     }
     
-    public update(columnValues : object, escape : boolean = true) : MySQLData {
+    public update(columnValues : {[key:string]:any}, escape : boolean = true) : MySQLData {
         var params = [];
         if(escape) {
             for(var key in columnValues) {
@@ -572,6 +606,9 @@ export default class MySQLData implements iSQL {
     } 
 
     private generateMultiInsert(): string {
+        if(!this.multiInsertValues) {
+            return "";
+        }
         var columns = Object.keys(this.multiInsertValues[0]).map(this.checkReserved);
         var insert = columns.join(",") + ") VALUES ";
         insert += this.multiInsertValues.map((insertRow:object)=>{
@@ -581,6 +618,9 @@ export default class MySQLData implements iSQL {
     }
 
     private generateSingleInsert(): string {
+        if(!this.insertValues) {
+            return "";
+        }
         var columns = Object.keys(this.insertValues).map(this.checkReserved);
         var insert = columns.join(",") + ") VALUES ";
         insert += "(" + Object.values(this.insertValues).join(",") + ")";
@@ -654,7 +694,11 @@ export default class MySQLData implements iSQL {
 
     public execute(query : string): Promise<SQLResult> {
         return new Promise((resolve,reject)=>{
-            this.connect().getConnection(async (err,connection)=>{
+            const connection = this.connect();
+            if(!connection) {
+                return reject();
+            }
+            connection.getConnection(async (err,connection)=>{
                 if(err) {
                     reject(err);
                 } else {
@@ -693,10 +737,10 @@ export default class MySQLData implements iSQL {
         return this;
     }
 
-    private addJoin(type: string, table : string | MySQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null):void {
+    private addJoin(type: string, table : string | MySQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) | undefined = undefined, arg4 : string | undefined = undefined):void {
         var tableName = "";
-        var primaryKey: string | ((q:Query)=>Query);
-        var foreignKey: string;
+        var primaryKey: string | ((q:Query)=>Query) | undefined;
+        var foreignKey: string | undefined;
         var params = [];
         if(typeof table == "string") {
             tableName = table;
@@ -709,9 +753,9 @@ export default class MySQLData implements iSQL {
             params = table.getParams();
         }
         var query = new Query(false);
-        if(typeof primaryKey != "string") {
+        if(primaryKey && typeof primaryKey != "string") {
             primaryKey(query);
-        } else {
+        } else if(typeof primaryKey == "string") {
             query.on(primaryKey,"=",foreignKey);
             
         }
@@ -727,7 +771,7 @@ export default class MySQLData implements iSQL {
     public join(tableName : MySQLData, tableAlias : string, primaryKey : string, foreignKey : string) : MySQLData
     public join(tableName : string, queryFunc : (q: Query) => Query) : MySQLData
     public join(tableName : string, primaryKey : string, foreignKey : string) : MySQLData
-    public join(table : string | MySQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null) : MySQLData {
+    public join(table : string | MySQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) | undefined = undefined, arg4 : string | undefined = undefined) : MySQLData {
         this.addJoin("JOIN", table, arg2, arg3, arg4);
         return this;
     }
@@ -736,7 +780,7 @@ export default class MySQLData implements iSQL {
     public leftJoin(tableName : MySQLData, tableAlias : string, primaryKey : string, foreignKey : string) : MySQLData
     public leftJoin(tableName : string, queryFunc : (q: Query) => Query) : MySQLData
     public leftJoin(tableName : string, primaryKey : string, foreignKey : string) : MySQLData
-    public leftJoin(table : string | MySQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) = null, arg4 : string = null) : MySQLData {
+    public leftJoin(table : string | MySQLData, arg2 : string | ((q: Query)=>Query), arg3 : string | ((q: Query)=>Query) | undefined = undefined, arg4 : string | undefined = undefined) : MySQLData {
         this.addJoin("LEFT JOIN", table, arg2, arg3, arg4);
         return this;
     }
@@ -747,8 +791,11 @@ export default class MySQLData implements iSQL {
         sql.cols(["COUNT(*) num"]);
         return new Promise((resolve,reject) => {
             sql.fetch().then((result) => {
-                var num = result.rows[0]['num'];
-                resolve(num);
+                if(result.rows.length > 0) {
+                    let countResult = result.rows[0] as {num:number};
+                    return resolve(countResult.num);
+                }
+                resolve(0);
             }).catch(err=>{
                 reject(err);
             });

@@ -22,7 +22,7 @@ app.use(bodyParser.urlencoded({"extended": true}));
 app.use(bodyParser.json());
 var originsWhitelist = Config.get().whitelisted_domains;
 var corsOptions = {
-  origin: function(origin, callback){
+  origin: function(origin:string, callback:CallableFunction){
         var isWhitelisted = originsWhitelist.indexOf(origin) !== -1;
         callback(null, isWhitelisted);
   },

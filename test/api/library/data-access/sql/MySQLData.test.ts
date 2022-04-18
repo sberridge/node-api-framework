@@ -4,7 +4,7 @@ import MySQLData from "./../../../../../api/library/data-access/sql/MySQLData";
 import iSQL from "./../../../../../api/library/data-access/sql/interface/SQLInterface";
 
 
-let db:iSQL;
+let db:iSQL | null;
 
 beforeAll(()=>{
     jest.spyOn(MySQLData.prototype, "fetch").mockImplementation(()=>{
@@ -24,24 +24,28 @@ beforeAll(()=>{
 });
 
 describe("MySQLData Tests", ()=>{
+    
     it('should set tableName',()=>{
+        if(!db) return;
         db.table("users");
-        expect(db["tableName"]).toEqual("users");
+        expect((db as any)["tableName"]).toEqual("users");
     });
 
     it('should set and escape columns',()=>{
+        if(!db) return;
         const expected = [
             "id",
             "name",
             "`table`"
         ];
         db.cols(["id","name","table"]);
-        (db["selectColumns"] as string[]).forEach((col:string, i)=>{
+        ((db as any)["selectColumns"] as string[]).forEach((col:string, i)=>{
             expect(col).toEqual(expected[i]);
         });
     });
 
     it('should add and escape additional column',()=>{
+        if(!db) return;
         db.cols(["id","name","table"]);
         db.addCol("table.join additional_field");
         db.addCol("table.field2");
@@ -57,10 +61,10 @@ describe("MySQLData Tests", ()=>{
             "additional_field",
             "field2"
         ];
-        (db["selectColumns"] as string[]).forEach((col,i)=>{
+        ((db as any)["selectColumns"] as string[]).forEach((col,i)=>{
             expect(col).toEqual(expectedCols[i]);
         });
-        (db["additionalColumns"] as string[]).forEach((col,i)=>{
+        ((db as any)["additionalColumns"] as string[]).forEach((col,i)=>{
             expect(col).toEqual(expectedAdditional[i]);
         });
     });
@@ -68,6 +72,7 @@ describe("MySQLData Tests", ()=>{
 
 
     it('should generate a basic select',()=>{
+        if(!db) return;
         db.table("users");
         db.cols(["*"]);
         const query = db.generateSelect();
@@ -75,7 +80,7 @@ describe("MySQLData Tests", ()=>{
     });
 
     it('should generate a query to check if a table exists',()=>{
-        const query:MySQLData = db["generateDoesTableExistQuery"]("table");
+        const query:MySQLData = (db as any)["generateDoesTableExistQuery"]("table");
         expect(query.generateSelect()).toMatch(/SELECT +COUNT\(\*\) +num FROM +information_schema.TABLES +WHERE +TABLE_SCHEMA += +\? +AND +TABLE_NAME += +\? +/);
     })
 })

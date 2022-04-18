@@ -16,9 +16,9 @@ module.exports = function(app:expressWs.Application) {
       
       isAlive = true;
 
-      const authData = JWT.getInstance().verify(req);
+      const authData:any = JWT.getInstance().verify(req);
 
-      let user:WSUser = null;
+      let user:WSUser | null = null;
       if(authData) {
         //authenticated
         user = new WSUser(ws, {
@@ -34,7 +34,7 @@ module.exports = function(app:expressWs.Application) {
       WSController.forEach((ws,token)=>{
         WSController.send(token,{
           "action": "message",
-          "message": `User connected: ${user.user.id}`
+          "message": `User connected: ${user?.user.id}`
         });
       });
       
@@ -49,7 +49,7 @@ module.exports = function(app:expressWs.Application) {
       ws.on('message',async (message:string)=>{
         var body:object = JSON.parse(message);
         WSController.forEach((ws:WSUser,token)=>{
-            if(ws.user['id'] !== user.user.id) {
+            if(ws.user['id'] !== user?.user.id) {
                 WSController.send(token,body);
             }
             
@@ -57,11 +57,11 @@ module.exports = function(app:expressWs.Application) {
       });
 
       ws.on('close',(e)=>{
-        WSController.removeUser(user.user.id.toString());
+        WSController.removeUser(user?.user.id.toString());
         WSController.forEach((ws:WSUser,token)=>{
           WSController.send(token,{
             "action": "message",
-            "message": `User disconnected: ${user.user.id}`
+            "message": `User disconnected: ${user?.user.id}`
           });
         })
       });

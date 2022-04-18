@@ -4,8 +4,11 @@ import WeightedCondition from "../WeightedCondition";
 import Query from '../Query';
 import { SQLOrder } from './SQLOrder';
 import { comparison, pagination } from './SQLTypes';
+import ConnectionConfig from './SQLConnectionConfig';
+import BaseModel from 'api/library/modelling/BaseModel';
 
     export default interface iSQL {
+
 
         doesTableExist(tableName:string) : Promise<boolean>
         doesColumnExist(tableName:string,column:string) : Promise<boolean>
@@ -73,11 +76,11 @@ import { comparison, pagination } from './SQLTypes';
         streamModels(num: number, callback: (models:ModelCollection)=>Promise<boolean>): Promise<void>
 
         generateInsert():string
-        insert(columnValues : object[], escape : boolean) : iSQL
-        insert(columnValues : object, escape : boolean) : iSQL
+        insert(columnValues : {[key:string]:any}[], escape : boolean) : iSQL
+        insert(columnValues : {[key:string]:any}, escape : boolean) : iSQL
 
         generateUpdate():string
-        update(columnValues : object, escape : boolean) : iSQL
+        update(columnValues : {[key:string]:any}, escape : boolean) : iSQL
 
         save() : Promise<SQLResult>
 

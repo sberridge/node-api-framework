@@ -6,6 +6,7 @@ import {WSControl} from './../library/websockets/WSControl';
 import {JWT} from './../library/authentication/JWT';
 import { paginationURLQuery } from './types/ControllerTypes';
 import { applyQueryPagination } from './functions/ControllerFunctions';
+import { Gender } from './../models/Gender';
 const ws:WSControl = WSControl.getInstance();
 
 
@@ -25,6 +26,7 @@ exports.get_users = async function(req:Request<{},{},{},paginationURLQuery>, res
 
     const {query} = req;
     const authData = JWT.getInstance().verify(req);
+    
     if(authData) {
         ws.send(authData['user_id'], {
             "message": "you called get_users"
@@ -36,8 +38,34 @@ exports.get_users = async function(req:Request<{},{},{},paginationURLQuery>, res
     if(!paginationResult.success) {
         return error();
     }
+
+    let users = await getUsers.fetchModels();
+    users.setVisibleColumns([
+        User.fields.id,
+        User.fields.date_of_birth,
+        User.fields.email,
+        User.fields.first_name,
+        User.fields.surname,
+        User.fields.phone_number,
+        User.fields.postcode,
+        User.fields.street_address,
+    ])
+    await users.eagerLoad(new Map([
+        ["gender",(q)=>{return q;}]
+    ]))
+
+    const gender = await (new Gender()).find(3).catch(e=>{
+
+    });
+    if(gender) {
+        gender.updateColumns({
+            [Gender.fields.gender]: "Other!"
+        })
+        await gender.save();
+    }
     
-    let totalRows = paginationResult.result.total_rows;
-    res.json(ResponseGenerator.success((await getUsers.fetchModels()).toJSON(), totalRows));
+    
+    let totalRows = paginationResult.result ? paginationResult.result.total_rows : 0;
+    res.json(ResponseGenerator.success(users.toJSON(), totalRows));
     next();
 };

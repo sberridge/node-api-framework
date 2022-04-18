@@ -2,14 +2,14 @@ import { WebSocket } from "ws";
 export class WSUser {
     public ws:WebSocket;
     public user;
-    constructor(ws:WebSocket,user) {
+    constructor(ws:WebSocket,user : any) {
         this.ws = ws;
         this.user = user;
     }
 }
 export class WSControl {
     private websockets:Map<string,WSUser> = new Map;
-    private static instance: WSControl = null;
+    private static instance: WSControl | null = null;
     private constructor() {
 
     }
@@ -23,9 +23,9 @@ export class WSControl {
         this.websockets.set(key,wsUser);
         
     }
-    public getUser(key:string): WSUser {
+    public getUser(key:string): WSUser | null {
         if(this.websockets.has(key)) {
-            return this.websockets.get(key);
+            return this.websockets.get(key) as WSUser;
         }
         return null;
     }
@@ -41,7 +41,7 @@ export class WSControl {
         });
     }
     public send(token:string,body:object) {
-        let user : WSUser = this.getUser(token);
+        let user = this.getUser(token);
         if(user) {
             user.ws.send(JSON.stringify(body));
         }

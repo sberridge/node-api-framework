@@ -4,8 +4,8 @@ import Query from "./Query";
 export default class WeightedCondition {
     private query : Query
     private weight: number
-    private nonMatchWeight: number
-    private nonMatchSubCondition: WeightedCondition
+    private nonMatchWeight: number | undefined;
+    private nonMatchSubCondition: WeightedCondition | undefined
 
 
     constructor(query:Query,weight:number,subCondition:WeightedCondition)
@@ -29,11 +29,11 @@ export default class WeightedCondition {
     }
 
     public applyCondition(sql:iSQL,params:any[],paramNames:any[]):string {        
-        var elseStr = null;
+        var elseStr = "0";
         var whereStr = this.query.applyWheres(params,paramNames);
         if(typeof this.nonMatchWeight === 'number') {
-            elseStr = this.nonMatchWeight;
-        } else {
+            elseStr = this.nonMatchWeight.toString();
+        } else if(this.nonMatchSubCondition) {
             this.nonMatchSubCondition.increaseParamNum(this.getParamNum() - 1);
             let startParamNum = this.nonMatchSubCondition.getParamNum();
             elseStr = this.nonMatchSubCondition.applyCondition(sql,params,paramNames);

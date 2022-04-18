@@ -6,10 +6,10 @@ import ConnectionConfig from './sql/interface/SQLConnectionConfig';
 import PostgresData from './sql/PostgresData';
 
 export default class DataAccessFactory {
-    private config = Config.get().databases.sql;
+    private config:{[key:string]: ConnectionConfig} = Config.get().databases.sql;
     private ready:boolean = true;
     private readyFuncs = [];
-    private static instance:DataAccessFactory = null;
+    private static instance:DataAccessFactory|null = null;
     private constructor() {
     }
     public static getInstance() {
@@ -18,27 +18,22 @@ export default class DataAccessFactory {
         }
         return DataAccessFactory.instance;
     }
-    private getConnectionConfig(configKey: string): ConnectionConfig {
-        let connectionConfig:ConnectionConfig = {};        
+    private getConnectionConfig(configKey: keyof typeof this.config): ConnectionConfig {
+        let connectionConfig:ConnectionConfig = {
+            host: "",
+            name: ""
+        };
+        if(!(configKey in this.config)) {
+            return connectionConfig
+        }
         var config = this.config[configKey];
-        [
-            "type",
-            "host",
-            "port",
-            "database",
-            "user",
-            "password",
-            "name"
-        ].forEach(f=>{
-            if(f in config) {
-                connectionConfig[f] = config[f];
-            }
-        });
-        connectionConfig.name = configKey;
+        connectionConfig = config;
+        
+        connectionConfig.name = configKey.toString();
         return connectionConfig
     }
-    public create(configKey : string):iSQL {
-        const connectionConfig = this.getConnectionConfig(configKey);
+    public create(configKey : string):iSQL | null {
+        const connectionConfig = this.getConnectionConfig(configKey as keyof typeof this.config);
         switch(connectionConfig.type) {
             case "MySQL":
                 return new MySQLData(connectionConfig);
@@ -47,12 +42,7 @@ export default class DataAccessFactory {
             case "Postgres":
                 return new PostgresData(connectionConfig);
         }
-    }
-    public onReady(func) {
-        this.readyFuncs.push(func);
-        if(this.ready) {
-            func();
-        }
+        return null;
     }
     public addConfig(name:string,config:ConnectionConfig) {
         this.config[name] = config;
@@ -62,11 +52,12 @@ export default class DataAccessFactory {
             return true;
         }
         let da = this.create(name);
+        if(!da) return true;
         await da.closePool(name);
         delete this.config[name];
         return true;
     }
-    public hasConfig(name):boolean {
+    public hasConfig(name:string):boolean {
         return (name in this.config);
     }
 }

@@ -3,7 +3,8 @@
     "encryption_key": "GM48HcXLsEA*uY^jFov9*TUAXZ!03FCjT18Qmlu6uOx#WJw",
     "whitelisted_domains": [
         "http://localhost:9000",
-        "http://localhost"
+        "http://localhost",
+        "http://localhost:3000"
     ],
     "databases": {
         "sql": {

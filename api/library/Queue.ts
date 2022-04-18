@@ -1,6 +1,6 @@
 //class for an item added to the queue;
 export class Task {
-    private id: string;
+    private id: string | undefined;
     private time: number;
     private timer: NodeJS.Timeout;
     private payload;
@@ -68,7 +68,7 @@ export class Queue {
      * @param item Task instance
      * @param id optional id to give to the task, if ommitted then one will be generated
      */
-    public addTask(task: Task,id: string = null) {
+    public addTask(task: Task,id: string | null = null) {
         if(id === null) {
             id = (++this.__id).toString();
         }
@@ -88,8 +88,11 @@ export class Queue {
      */
     public removeTask(id:string) {
         if(this.queuedTasks.has(id)) {
-            this.queuedTasks.get(id).cancel();
-            this.queuedTasks.delete(id);
+            const task = this.queuedTasks.get(id);
+            if(task) {
+                task.cancel();
+                this.queuedTasks.delete(id);
+            }            
         }
     }
     

@@ -26,6 +26,7 @@
     "@types/node": "^11.13.0",
     "@types/node-fetch": "^2.5.8",
     "@types/pg": "^8.6.4",
+    "@types/rijndael-js": "^1.0.0",
     "bcrypt": "^5.0.1",
     "cookie-session": "^2.0.0",
     "cors": "^2.8.5",

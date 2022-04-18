@@ -4,6 +4,7 @@ import BaseModel from '../BaseModel';
 import ModelCollection from '../ModelCollection';
 import Query from './../../data-access/sql/Query';
 import DataAccessFactory from './../../data-access/factory';
+import SQLResult from './../../data-access/sql/SQLResult';
 const dataFactory = DataAccessFactory.getInstance();
 
 export default class BelongsToMany implements iRelation {
@@ -13,7 +14,7 @@ export default class BelongsToMany implements iRelation {
     private primaryForeignKey: string;
     private secondaryForeignKey: string;
     private query: iSQL;
-    private linkColumns: string[];
+    private linkColumns: string[] | undefined;
     public returnsMany: boolean = true;
 
     constructor(primaryModel: any, foreignFunc: any, linkTable: string, primaryForeignKey: string, secondaryForeignKey: string) {
@@ -42,7 +43,10 @@ export default class BelongsToMany implements iRelation {
     }
 
     public generateQuery(): iSQL {
-        var daQuery: iSQL = dataFactory.create(this.primaryModel.getSqlConfig());
+        var daQuery = dataFactory.create(this.primaryModel.getSqlConfig());
+        if(!daQuery) {
+            throw("No database found");
+        }
         daQuery.toModel(this.foreignModel.constructor)
         var self = this;
         daQuery.table(this.primaryModel.getTable() + " __primary__");
@@ -68,7 +72,7 @@ export default class BelongsToMany implements iRelation {
         let daQuery = this.query;
         daQuery.whereIn("__primary__." + this.primaryModel.getPrimaryKey(),ids, true);
         let results = await daQuery.fetch();
-        let groupedResults = {};
+        let groupedResults:{[key:string]:BaseModel} = {};
         let modelConstructor: any = this.foreignModel.constructor;
         results.rows.forEach(result=>{
             if(!(result["__table_" + this.primaryModel.getTable() + "__key"] in groupedResults)) {
@@ -98,7 +102,7 @@ export default class BelongsToMany implements iRelation {
         return model;
     }
 
-    public getResult(ids: any[]): Promise<object>
+    public getResult(ids: any[]): Promise<SQLResult>
     public getResult(): Promise<BaseModel>
     public getResult(ids: any = null): Promise<any> {
         return new Promise(async (resolve,reject)=>{
@@ -122,7 +126,7 @@ export default class BelongsToMany implements iRelation {
         let daQuery = this.query;
         daQuery.whereIn("__primary__." + this.primaryModel.getPrimaryKey(),ids, true);
         let results = await daQuery.fetch();
-        let groupedResults = {};
+        let groupedResults:{[key:string]:ModelCollection} = {};
         let modelConstructor: any = this.foreignModel.constructor;
         results.rows.forEach(result=>{
             if(!(result["__table_" + this.primaryModel.getTable() + "__key"] in groupedResults)) {
@@ -146,7 +150,7 @@ export default class BelongsToMany implements iRelation {
         return groupedResults;
     }
 
-    public getResults(ids: any[]): Promise<object>
+    public getResults(ids: any[]): Promise<{[key:string]:ModelCollection}>
     public getResults(): Promise<ModelCollection>
     public getResults(ids: any = null): Promise<any> {
         return new Promise(async (resolve,reject)=>{
@@ -159,11 +163,14 @@ export default class BelongsToMany implements iRelation {
         });            
     }
 
-    public link(id) {
+    public link(id:any) {
         return new Promise((resolve,reject)=>{
-            var daQuery: iSQL = dataFactory.create(this.primaryModel.getSqlConfig());
+            var daQuery = dataFactory.create(this.primaryModel.getSqlConfig());
+            if(!daQuery){
+                throw("No database found");
+            }
             daQuery.table(this.linkTable);
-            var insert = {};
+            var insert:{[key:string]:any} = {};
             insert[this.primaryForeignKey] = this.primaryModel.getColumn(this.primaryModel.getPrimaryKey());
             insert[this.secondaryForeignKey] = id;
             daQuery.insert(insert,true);
@@ -182,9 +189,12 @@ export default class BelongsToMany implements iRelation {
         
     }
 
-    public unlink(id) {
+    public unlink(id:any) {
         return new Promise((resolve,reject)=>{
-            var daQuery: iSQL = dataFactory.create(this.primaryModel.getSqlConfig());
+            var daQuery = dataFactory.create(this.primaryModel.getSqlConfig());
+            if(!daQuery) {
+                throw("No database found");
+            }
             daQuery.table(this.linkTable);
             daQuery.where(this.primaryForeignKey,"=",this.primaryModel.getColumn(this.primaryModel.getPrimaryKey()),true);
             daQuery.where(this.secondaryForeignKey,"=",id,true);
@@ -200,15 +210,18 @@ export default class BelongsToMany implements iRelation {
         })
     }
     
-    public update(id,updateValues:object) {
+    public update(id:any,updateValues:{[key:string]:any}) {
         return new Promise((resolve,reject)=>{
-            var daQuery: iSQL = dataFactory.create(this.primaryModel.getSqlConfig());
+            var daQuery = dataFactory.create(this.primaryModel.getSqlConfig());
+            if(!daQuery) {
+                throw("No database found");
+            }
             daQuery.table(this.linkTable);
             daQuery.where(this.primaryForeignKey,"=",this.primaryModel.getColumn(this.primaryModel.getPrimaryKey()),true);
             daQuery.where(this.secondaryForeignKey,"=",id,true);
-            var newUpdate = {};
+            var newUpdate:{[key:string]:any} = {};
             for(var key in updateValues) {
-                if(this.linkColumns.indexOf(key) > -1) {
+                if(this.linkColumns && this.linkColumns.indexOf(key) > -1) {
                     newUpdate[key] = updateValues[key];
                 }
             }

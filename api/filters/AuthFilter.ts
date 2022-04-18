@@ -7,7 +7,7 @@ export function AuthFilter(req:Request,res:Response,next:NextFunction) {
     if(jwtPayload === null) {
         return res.status(403).json(ResponseGenerator.authentication());
     } else {
-        req['currentUser'] = jwtPayload;
+        (req as any)['currentUser'] = jwtPayload;
     }
     next();
 };
