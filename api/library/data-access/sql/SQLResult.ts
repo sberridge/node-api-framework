@@ -1,8 +1,8 @@
 export default class SQLResult {
-    public success: boolean;
-    public error;
-    public insert_id: number;
-    public rows_affected: number;
-    public rows_changed: number;
-    public rows: object[];
+    public success: boolean = false;
+    public error:any;
+    public insert_id: number = 0;
+    public rows_affected: number = 0;
+    public rows_changed: number = 0;
+    public rows: any[] = [];
 }

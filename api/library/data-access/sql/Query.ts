@@ -1,8 +1,21 @@
 import iSQL from './interface/SQLInterface';
 import { comparison } from './interface/SQLTypes';
+type whereDetails = {
+    type: "where" | "logic" | "bracket"
+    func?: (...args:any[])=>whereDetails
+    args?: any[]
+    field?: string
+    comparator?: string
+    params?: any[]
+    value?: any
+    escape?: boolean
+    namedParam?: string
+    paramNames?: string[]
+}
+
 export default class Query {
 
-    private wheres : object[] = [];
+    private wheres : whereDetails[] = [];
     private namedParams: boolean;
     private namedParamNum: number = 0;
     private namedParamPrefix: string = "param";
@@ -37,7 +50,7 @@ export default class Query {
         this.wheres.push({
             type: "where",
             func: (field : string, comparator : comparison, value : any, escape : boolean = true)=>{
-                var details = {
+                var details:whereDetails = {
                     type: "where",
                     field: field,
                     comparator: comparator,
@@ -158,10 +171,7 @@ export default class Query {
     public or() : Query {
         this.wheres.push({
             type: "logic",
-            field: null,
-            comparator: null,
-            value: "or",
-            escape: null
+            value: "or"
         });
         return this;
     }
@@ -169,10 +179,7 @@ export default class Query {
     public and() : Query {
         this.wheres.push({
             type: "logic",
-            field: null,
-            comparator: null,
-            value: "and",
-            escape: null
+            value: "and"
         });
         return this;
     }
@@ -180,10 +187,7 @@ export default class Query {
     public openBracket() : Query {
         this.wheres.push({
             type: "bracket",
-            field: null,
-            comparator: null,
-            value: "(",
-            escape: null
+            value: "("
         });
         return this;
     }
@@ -191,10 +195,7 @@ export default class Query {
     public closeBracket() : Query {
         this.wheres.push({
             type: "bracket",
-            field: null,
-            comparator: null,
-            value: ")",
-            escape: null
+            value: ")"
         });
         return this;
     }
@@ -206,9 +207,10 @@ export default class Query {
         }
         var first = true;
         var logic = "and";
-        this.wheres.forEach((where : any,i)=> {
+        this.wheres.forEach((where,i)=> {
             switch(where.type) {
                 case "where":
+                    if(!where.func || !where.args) return;
                     let whereDetails = where.func(...where.args);
                     if(!first && this.wheres[i-1]['type'] !== 'bracket') {
                         whereString += " " + logic.toUpperCase() + " ";
@@ -226,12 +228,12 @@ export default class Query {
                     } else {
                         whereString += " " + whereDetails.value + " ";
                     }
-                    if("params" in whereDetails) {
-                        whereDetails.params.forEach((whereParam)=>{
+                    if("params" in whereDetails && whereDetails.params) {
+                        whereDetails.params.forEach((whereParam:any)=>{
                             params.push(whereParam);
                         });
-                        if(this.namedParams) {
-                            whereDetails.paramNames.forEach((paramName)=>{
+                        if(this.namedParams && whereDetails.paramNames) {
+                            whereDetails.paramNames.forEach((paramName:any)=>{
                                 paramNames.push(paramName);
                             });
                         }

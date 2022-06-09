@@ -4,6 +4,7 @@ import BaseModel from '../BaseModel';
 import ModelCollection from '../ModelCollection';
 import Query from './../../data-access/sql/Query';
 import DataAccessFactory from './../../data-access/factory';
+import SQLResult from './../../data-access/sql/SQLResult';
 const dataFactory = DataAccessFactory.getInstance();
 
 export default class HasOne implements iRelation {
@@ -30,7 +31,10 @@ export default class HasOne implements iRelation {
     }
 
     public generateQuery(): iSQL {
-        var daQuery: iSQL = dataFactory.create(this.primaryModel.getSqlConfig());
+        var daQuery = dataFactory.create(this.primaryModel.getSqlConfig());
+        if(!daQuery) {
+            throw("No database found");
+        }
         daQuery.toModel(this.foreignModel.constructor)
         var self = this;
         daQuery.table(this.primaryModel.getTable() + " __primary__");
@@ -51,7 +55,7 @@ export default class HasOne implements iRelation {
         let daQuery = this.query;
         daQuery.whereIn("__primary__." + this.primaryModel.getPrimaryKey(),ids, true);
         let results = await daQuery.fetch();
-        let groupedResults = {};
+        let groupedResults: {[key:string]:BaseModel} = {};
         let modelConstructor: any = this.foreignModel.constructor;
         results.rows.forEach(result=>{
             if(!(result["__table_" + this.primaryModel.getTable() + "__key"] in groupedResults)) {
@@ -75,7 +79,7 @@ export default class HasOne implements iRelation {
         return model;            
     }
 
-    public getResult(ids: any[]): Promise<object>
+    public getResult(ids: any[]): Promise<SQLResult>
     public getResult(): Promise<BaseModel>
     public getResult(ids: any = null): Promise<any> {
         return new Promise(async (resolve,reject)=>{
@@ -93,7 +97,7 @@ export default class HasOne implements iRelation {
         let daQuery = this.query;
         daQuery.whereIn("__primary__." + this.primaryModel.getPrimaryKey(),ids, true);
         let results = await daQuery.fetch();
-        var groupedResults = {};
+        var groupedResults:{[key:string]:ModelCollection} = {};
         var modelConstructor: any = this.foreignModel.constructor;
         results.rows.forEach(result=>{
             if(!(result["__table_" + this.primaryModel.getTable() + "__key"] in groupedResults)) {
@@ -118,7 +122,7 @@ export default class HasOne implements iRelation {
         return results;
     }
 
-    public getResults(ids: any[]): Promise<object>
+    public getResults(ids: any[]): Promise<{[key:string]:ModelCollection}>
     public getResults(): Promise<ModelCollection>
     public getResults(ids: any = null): Promise<any> {
         return new Promise(async (resolve,reject)=>{

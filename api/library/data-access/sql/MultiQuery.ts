@@ -5,7 +5,7 @@ import SQLResult from './SQLResult';
 
 export class MultiQuery {
     private queries:Map<string, iSQL>;
-    private results:Map<string, SQLResult | ModelCollection> = new Map;
+    private results:Map<string, SQLResult | ModelCollection | null> = new Map;
     private completedQueries = 0;
     private type: MultiQuery.Type;
     
@@ -41,7 +41,7 @@ export class MultiQuery {
         });
     }
 
-    public run():Promise<Map<string, SQLResult | ModelCollection>> {
+    public run():Promise<Map<string, SQLResult | ModelCollection | null>> {
         return new Promise((resolve,reject)=>{
             for(let key of this.queries.keys()) {
                 this.execute(key).then(()=>{

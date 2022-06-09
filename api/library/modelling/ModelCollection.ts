@@ -4,9 +4,9 @@ import iRelation from './relations/interface/RelationInterface';
 export default class ModelCollection {
     private models: BaseModel[] = [];
     private index = 0;
-    private modelIdHash = {};
+    private modelIdHash:{[key:string|number]:BaseModel} = {};
 
-    public add(model) {
+    public add(model:BaseModel) {
         this.models.push(model);
         if(!(model.getColumn(model.getPrimaryKey()) in this.modelIdHash)) {
             this.modelIdHash[model.getColumn(model.getPrimaryKey())] = model;
@@ -17,37 +17,37 @@ export default class ModelCollection {
         return this.models;
     }
 
-    public find(id) {
+    public find(id:string|number) {
         if(id in this.modelIdHash) {
             return this.modelIdHash[id];
         }
         return null;
     }
 
-    public first(): BaseModel {
+    public first(): BaseModel | null {
         if(this.models.length > 0) {
             return this.models[0];
         }
         return null;
     }
 
-    public toList(): object[] {
-        var returnArr = [];
+    public toList(): {[key:string]:any}[] {
+        var returnArr: {[key:string]:any}[] = [];
         this.models.forEach(element => {
             returnArr.push(element.getColumns())
         });
         return returnArr;
     }
 
-    public toJSON() : object[] {
-        var returnArr = [];
+    public toJSON() : {[key:string]:any}[] {
+        var returnArr: {[key:string]:any}[] = [];
         this.models.forEach(element => {
             returnArr.push(element.toJSON())
         });
         return returnArr;
     }
 
-    public getIDs(): any[] {
+    public getIDs(): (string|number)[] {
         
         return Object.keys(this.modelIdHash);
     }
@@ -73,20 +73,24 @@ export default class ModelCollection {
         });
     }
 
-    private eagerLoadLevel(relationKey,func: (q:iSQL)=>iSQL):Promise<void> {
+    private eagerLoadLevel(relationKey:string,func: (q:iSQL)=>iSQL):Promise<void> {
         var model = this.first();
         return new Promise((resolve,reject)=>{
+            if(!model) return resolve();
             var relationNames = relationKey.split(".");
             var relationName = relationNames.shift();
-            if(!(relationName in model)) reject();
-            var relation:iRelation = model[relationName]();
+            if(!relationName) return reject();
+            if(!(relationName in model)) return reject();
+            var relationFunc = model[(relationName as keyof typeof model)] as ()=>iRelation;
+            var relation:iRelation = relationFunc.call(model);
             if(relationNames.length == 0 && func !== null) {
                 func(relation.getQuery(false));
             }
-            var idsToLoad = [];
+            var idsToLoad: (string | number)[] = [];
             
             var nextLoadModelCollection = new ModelCollection();
             this.models.forEach(model=>{
+                if(!relationName) return;
                 if(!model.hasRelation(relationName)) {
                     idsToLoad.push(model.getColumn(model.getPrimaryKey())); 
                 } else {
@@ -102,14 +106,16 @@ export default class ModelCollection {
             });
             if(idsToLoad.length > 0) {
                 relation.getResults(idsToLoad).then(results=>{
-                    
+                    if(!relationName) return resolve();
                     for(var modelID in results) {
-                        var relatedModels = results[modelID];
+                        var relatedModels = results[modelID as keyof typeof results];
                         if(relation.returnsMany) {
                             this.modelIdHash[modelID].setRelation(relationName,relatedModels);
                         } else {
-                            if(relatedModels.getModels().length > 0) {
-                                this.modelIdHash[modelID].setRelation(relationName,relatedModels.first());
+                            const relatedModel = relatedModels.first();
+
+                            if(relatedModel) {
+                                this.modelIdHash[modelID].setRelation(relationName,relatedModel);
                             } else {
                                 this.modelIdHash[modelID].setRelation(relationName,null);
                             }                            
@@ -153,7 +159,7 @@ export default class ModelCollection {
                 return;
             } 
             var self = this;
-            let relationKeys = [];
+            let relationKeys:string[] = [];
             for(let key of relations.keys()) {
                 relationKeys.push(key);
             }
@@ -163,7 +169,13 @@ export default class ModelCollection {
                     return;
                 }
                 var key = relationKeys.shift();
-                self.eagerLoadLevel(key,relations.get(key)).then(load);
+                if(key) {
+                    const relation = relations.get(key);
+                    if(relation) {
+                        self.eagerLoadLevel(key,relation).then(load);
+                    }
+                    
+                }                
             }
             load();
         });

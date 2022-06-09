@@ -14,13 +14,13 @@ export default class BaseModel {
     private sqlConfig: string;
     private primaryKey: string;
     private columns: string[] = ["*"];
-    private original: object = {};
-    private changed: object = {};
+    private original: {[key:string]:any} = {};
+    private changed: {[key:string]:any} = {};
     private isNew: boolean;
-    private relations: object = {};
-    private additionalColumns: object = {};
+    private relations: {[key:string]:ModelCollection | BaseModel | null} = {};
+    private additionalColumns: {[key:string]:any} = {};
     private visibleColumns: string[] = [];
-    private incrementingField: string;
+    private incrementingField: string | undefined;
 
     constructor(sqlConfig: string, tableName: string, primaryKey: string = "id", fields: string[]) {
         this.relations = {};
@@ -59,6 +59,9 @@ export default class BaseModel {
 
     private createDA() {
         const da = dataFactory.create(this.sqlConfig);
+        if(!da) {
+            throw("No database found");
+        }
         da.table(this.tableName);
         da.cols(this.columns);
         da.toModel(this.constructor);
@@ -87,7 +90,7 @@ export default class BaseModel {
     public loadData(data: object) {
         for(var key in data) {
             if(Object.keys(this.original).indexOf(key) > -1) {
-                this.original[key] = data[key];
+                this.original[key] = data[key as keyof typeof data];
             }
         }
         this.isNew = false;
@@ -125,12 +128,12 @@ export default class BaseModel {
     
     public updateColumns(values: object) {
         for(var key in values) {
-            this.updateColumn(key,values[key]);
+            this.updateColumn(key,values[key as keyof typeof values]);
         }
     }
 
-    public getColumns() : object {
-        var values = {};
+    public getColumns() : {[key:string]:any} {
+        var values:{[key:string]:any} = {};
         for(var key in this.original) {
             if(key in this.changed) {
                 values[key] = this.changed[key];
@@ -174,13 +177,14 @@ export default class BaseModel {
             }
         }
         for(var key in this.relations) {
-            if(this.relations[key] instanceof ModelCollection) {
+            const relation = this.relations[key];
+            if(relation instanceof ModelCollection) {
                 base[key] = [];
-                this.relations[key].getModels().forEach((related)=>{
+                relation.getModels().forEach((related)=>{
                     base[key].push(related.toJSON());
                 });
-            } else {
-                base[key] = this.relations[key].toJSON();
+            } else if(relation) {
+                base[key] = relation.toJSON();
             }
         }
         return base;
@@ -200,7 +204,7 @@ export default class BaseModel {
     public save(): Promise<boolean> {
         return new Promise((resolve,reject) => {
             const da = this.createDA();
-            var updateObj = {};
+            var updateObj:{[key:string]:any} = {};
             for(var key in this.changed) {
                 updateObj[key] = this.changed[key];
             }
@@ -246,24 +250,24 @@ export default class BaseModel {
         });
     }
 
-    public belongsTo(modelFunc: CallableFunction, foreignKey: string) {
+    public belongsTo(modelFunc: new (...args: any[]) => BaseModel, foreignKey: string) {
         return new BelongsTo(this,modelFunc,foreignKey);
     }
     
-    public hasOne(modelFunc: CallableFunction, foreignKey: string) {
+    public hasOne(modelFunc: new (...args: any[]) => BaseModel, foreignKey: string) {
         return new HasOne(this,modelFunc,foreignKey);
     }
     
-    public hasMany(modelFunc: CallableFunction, foreignKey: string) {
+    public hasMany(modelFunc: new (...args: any[]) => BaseModel, foreignKey: string) {
         return new HasMany(this,modelFunc,foreignKey);
     }
     
-    public belongsToMany(modelFunc: CallableFunction, linkTable: string, primaryForeignKey: string, secondaryForeignKey: string) {
+    public belongsToMany(modelFunc: new (...args: any[]) => BaseModel, linkTable: string, primaryForeignKey: string, secondaryForeignKey: string) {
         return new BelongsToMany(this,modelFunc,linkTable,primaryForeignKey,secondaryForeignKey);
     }
 
-    public setRelation(relationName: string, models: ModelCollection) {
-        if(typeof this[relationName] !== "undefined") {
+    public setRelation(relationName: string, models: ModelCollection | BaseModel | null) {
+        if(typeof this[relationName as keyof this] !== "undefined") {
             this.relations[relationName] = models;
         }
     }
@@ -277,7 +281,7 @@ export default class BaseModel {
         return relationName in this.relations;
     }
 
-    public addAdditionalColumn(field,value) {
+    public addAdditionalColumn(field:string,value:any) {
         this.additionalColumns[field] = value;
     }
 

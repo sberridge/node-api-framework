@@ -15,8 +15,8 @@ export class Validator {
     private fields:object;
     private validationResult:object;
     public success:boolean;
-    private validateFunctions = [];
-    public modelResults = {};
+    private validateFunctions:any[] = [];
+    public modelResults:{[key:string]:BaseModel} = {};
 
     constructor(fields:object) {
         this.fields = fields;
@@ -24,9 +24,9 @@ export class Validator {
         this.success = true;
     }
 
-    private get(fields,parentObject,validationObject,validationFunc: (value: any) => Promise<ValidationResult>) {
+    private get(fields:any,parentObject:any,validationObject:any,validationFunc: (value: any) => Promise<ValidationResult>) {
         var field:string = fields.shift();
-        if(field.substr(field.length-2) == "[]") {
+        if(field.substring(field.length-2) == "[]") {
             var field = field.substr(0,field.length-2);
             var val = (typeof parentObject[field]) == "undefined" ? null : parentObject[field];
             if(fields.length == 0) {
@@ -135,9 +135,9 @@ export class Validator {
         });
     }
 
-    public validateExists(field:string,model:BaseModel,func: (query:iSQL)=>void)
-    public validateExists(field:string,model:BaseModel)
-    public validateExists(field:string,model:BaseModel,func: (query:iSQL)=>void = null) {
+    public validateExists(field:string,model:BaseModel,func: (query:iSQL)=>void): void
+    public validateExists(field:string,model:BaseModel): void
+    public validateExists(field:string,model:BaseModel,func: ((query:iSQL)=>void) | undefined = undefined): void {
         var fieldParts = field.split(".");
         var self = this;
         this.get(fieldParts,this.fields,this.validationResult,function(value): Promise<ValidationResult> {
@@ -148,7 +148,10 @@ export class Validator {
                         func(query);
                         query.fetchModels().then((results:ModelCollection)=>{
                             if(results.first() !== null) {
-                                self.modelResults[field] = results.first();
+                                const model = results.first();
+                                if(model) {
+                                    self.modelResults[field] = model;
+                                }                                
                                 resolve(new ValidationResult());
                             } else {
                                 resolve(new ValidationResult(false,"not found"));    
@@ -213,7 +216,7 @@ export class Validator {
         });
     }
 
-    public validateCustom(field:string,func: (value)=>Promise<ValidationResult>) {
+    public validateCustom(field:string,func: (value:any)=>Promise<ValidationResult>) {
         var fieldParts = field.split(".");
         this.get(fieldParts,this.fields,this.validationResult,function(value): Promise<ValidationResult> {
             return new Promise((resolve,reject)=>{
@@ -274,7 +277,7 @@ export class Validator {
             var totalFuncs = this.validateFunctions.length;
             var completeFuncs = 0;
             this.validateFunctions.forEach((func)=>{
-                func.func(func.value).then((result)=>{
+                func.func(func.value).then((result:ValidationResult)=>{
                     if(!result.success) {
                         this.success = false;
                         func.object[func.field] = result.message;

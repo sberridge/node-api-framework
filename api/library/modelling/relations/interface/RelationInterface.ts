@@ -1,6 +1,7 @@
 import BaseModel from '../../BaseModel';
 import ModelCollection from '../../ModelCollection';
-import iSQL from 'api/library/data-access/sql/interface/SQLInterface';
+import iSQL from '../../../data-access/sql/interface/SQLInterface';
+import SQLResult from '../../../data-access/sql/SQLResult';
 
 export default interface iRelation {
     returnsMany: boolean;
@@ -9,10 +10,10 @@ export default interface iRelation {
     getQuery(applyWhere:boolean): iSQL
     getQuery(): iSQL
 
-    getResult(ids: any[]): Promise<object>
+    getResult(ids: any[]): Promise<SQLResult>
     getResult(): Promise<BaseModel>
     
-    getResults(ids: any[]): Promise<object>
+    getResults(ids: any[]): Promise<{[key:string]:ModelCollection}>
     getResults(): Promise<ModelCollection>
 }
     

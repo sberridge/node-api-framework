@@ -1,6 +1,6 @@
 import Config from "./Config";
 import * as crypto from "crypto"
-import * as Rijndael from "rijndael-js";
+import Rijndael = require("rijndael-js");
 
 export class Encryption {
     static encrypt(string:string): string {
@@ -10,7 +10,7 @@ export class Encryption {
                     .update(Buffer.from(secret,'utf8'))
                     .digest();
         const cipher = new Rijndael(hash,'cbc');        
-        let cipherText = Buffer.from(cipher.encrypt(string,128,iv));
+        let cipherText = Buffer.from(cipher.encrypt(string,"128",iv));
 
         return iv.toString("base64").replace("==","") + "==" + cipherText.toString("base64");
     }
@@ -28,6 +28,6 @@ export class Encryption {
 
         const cipher = new Rijndael(hash,'cbc');
         const cipherString = Buffer.from(string,'base64')
-        return Buffer.from(cipher.decrypt(cipherString,128,Buffer.from(ivStr,'base64'))).toString().trim();
+        return Buffer.from(cipher.decrypt(cipherString,"128",Buffer.from(ivStr,'base64'))).toString().trim();
     }
 }

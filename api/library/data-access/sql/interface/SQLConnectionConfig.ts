@@ -1,6 +1,6 @@
 type ConnectionConfig = {
     "type"?: string,
-    "host"?: string,
+    "host": string,
     "port"?: number,
     "database"?: string,
     "user"?: string,

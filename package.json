@@ -5,18 +5,16 @@
   "description": "nodejs backend framework for API development",
   "main": "index.js",
   "scripts": {
-    "test": "tsc && node dist/out-tsc/test/init/init.js && mocha dist/out-tsc/test",
+    "test": "jest",
     "start": "tsc && nodemon dist/out-tsc/server.js"
   },
   "author": "Steven Berridge",
   "license": "ISC",
   "devDependencies": {
-    "@types/chai": "^4.2.15",
-    "@types/mocha": "^8.2.2",
-    "chai": "^4.3.4",
-    "mocha": "^8.1.3",
-    "mochawesome": "^7.0.1",
-    "nodemon": "^2.0.15"
+    "@types/jest": "^27.4.1",
+    "jest": "^27.5.1",
+    "nodemon": "^2.0.15",
+    "ts-jest": "^27.1.4"
   },
   "dependencies": {
     "@types/bcrypt": "^5.0.0",
@@ -28,6 +26,7 @@
     "@types/node": "^11.13.0",
     "@types/node-fetch": "^2.5.8",
     "@types/pg": "^8.6.4",
+    "@types/rijndael-js": "^1.0.0",
     "bcrypt": "^5.0.1",
     "cookie-session": "^2.0.0",
     "cors": "^2.8.5",
@@ -39,6 +38,7 @@
     "node-fetch": "^2.6.1",
     "pg": "^8.7.1",
     "pg-query-stream": "^4.2.1",
-    "rijndael-js": "^2.0.0"
+    "rijndael-js": "^2.0.0",
+    "typescript": "^4.6.3"
   }
 }
