@@ -4,6 +4,7 @@ import {User} from './User';
 export class Gender extends BaseModel {
     constructor() {        
         super("test",Gender.table,Gender.fields.id,Object.values(Gender.fields));
+        this.setIncrementingField(Gender.fields.id);
     }
 
     static table = "genders";

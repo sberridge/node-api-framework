@@ -10,6 +10,7 @@ import { Party } from './Party';
 export class User extends BaseModel {
     constructor() { 
         super("test",User.table,User.fields.id,Object.values(User.fields));
+        this.setIncrementingField(User.fields.id)
     }
 
     static table = "users";

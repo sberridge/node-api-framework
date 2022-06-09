@@ -82,6 +82,16 @@ describe("MySQLData Tests", ()=>{
     it('should generate a query to check if a table exists',()=>{
         const query:MySQLData = (db as any)["generateDoesTableExistQuery"]("table");
         expect(query.generateSelect()).toMatch(/SELECT +COUNT\(\*\) +num FROM +information_schema.TABLES +WHERE +TABLE_SCHEMA += +\? +AND +TABLE_NAME += +\? +/);
-    })
+    });
+
+    it('should generate a query to check if a column exists', ()=>{
+        const query:MySQLData = (db as any)["generateDoesColumnExistQuery"]("table", "column");
+        expect(query.generateSelect()).toMatch(/SELECT +COUNT\(\*\) +num FROM +information_schema.COLUMNS +WHERE +TABLE_SCHEMA += +\? +AND +TABLE_NAME += +\? +AND +COLUMN_NAME += +\? +/);
+    });
+    
+    it('should generate a query to check if a trigger exists', ()=>{
+        const query:MySQLData = (db as any)["generateDoesTriggerExistQuery"]("trigger_name");
+        expect(query.generateSelect()).toMatch(/SELECT +COUNT\(\*\) +num FROM +information_schema.TRIGGERS +WHERE +TRIGGER_SCHEMA += +\? +AND +TRIGGER_NAME += +\? +/);
+    });
 })
 
