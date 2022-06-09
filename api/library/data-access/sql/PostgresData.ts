@@ -333,9 +333,8 @@ export default class PostgresData implements iSQL {
         return this;
     }
 
-    public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: WeightedCondition, escape : boolean) : PostgresData
-    public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number, escape : boolean) : PostgresData
-    public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight:any, escape : boolean = true) : PostgresData {
+    public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number | WeightedCondition, escape : boolean) : PostgresData
+    public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number | WeightedCondition, escape : boolean = true) : PostgresData {
         var weightedQuery = new Query(true);
         weightedQuery.setParamSymbol("$");
         weightedQuery.setPrefix("");
@@ -345,9 +344,8 @@ export default class PostgresData implements iSQL {
         return this;
     }
     
-    public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: WeightedCondition, escape : boolean) : WeightedCondition
-    public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number, escape : boolean) : WeightedCondition
-    public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight:any, escape : boolean = true) : WeightedCondition {
+    public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number | WeightedCondition, escape : boolean) : WeightedCondition
+    public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight:number | WeightedCondition, escape : boolean = true) : WeightedCondition {
         var weightedQuery = new Query(true);
         weightedQuery.setParamSymbol("$");
         weightedQuery.setPrefix("");

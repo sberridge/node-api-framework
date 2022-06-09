@@ -8,8 +8,7 @@ export default class WeightedCondition {
     private nonMatchSubCondition: WeightedCondition | undefined
 
 
-    constructor(query:Query,weight:number,subCondition:WeightedCondition)
-    constructor(query:Query,weight:number,nonMatchWeight:number)
+    constructor(query:Query,weight:number,nonMatchWeight:number | WeightedCondition)
     constructor(query:Query,weight:number,NonMatch:WeightedCondition|number) {
         this.query = query;
         this.weight = weight;

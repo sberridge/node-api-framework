@@ -348,9 +348,8 @@ export default class MSSQLData implements iSQL {
         return this;
     }
 
-    public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: WeightedCondition, escape : boolean) : MSSQLData
-    public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number, escape : boolean) : MSSQLData
-    public weightedWhere(field : string, comparator : comparison, value : any, weight: any, nonMatchWeight:any, escape : boolean = true) : MSSQLData {
+    public weightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number | WeightedCondition, escape : boolean) : MSSQLData
+    public weightedWhere(field : string, comparator : comparison, value : any, weight: any, nonMatchWeight:number | WeightedCondition, escape : boolean = true) : MSSQLData {
         var weightedQuery = new Query(true);
         weightedQuery.increaseParamNum(1);
         weightedQuery.where(this.checkReserved(field),comparator,value,escape);
@@ -358,9 +357,8 @@ export default class MSSQLData implements iSQL {
         return this;
     }
 
-    public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: WeightedCondition, escape : boolean) : WeightedCondition
-    public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number, escape : boolean) : WeightedCondition
-    public subWeightedWhere(field : string, comparator : comparison, value : any, weight: any, nonMatchWeight:any, escape : boolean = true) : WeightedCondition {
+    public subWeightedWhere(field : string, comparator : comparison, value : any, weight: number, nonMatchWeight: number | WeightedCondition, escape : boolean) : WeightedCondition
+    public subWeightedWhere(field : string, comparator : comparison, value : any, weight: any, nonMatchWeight: number | WeightedCondition, escape : boolean = true) : WeightedCondition {
         var weightedQuery = new Query(true);
         weightedQuery.increaseParamNum(1);
         weightedQuery.where(this.checkReserved(field),comparator,value,escape);
